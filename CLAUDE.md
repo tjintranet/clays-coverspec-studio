@@ -22,7 +22,6 @@ Plain files — no build step, no framework, deployable from any static server o
 | `index.html` | Markup, CSS, tab navigation, all HTML for every tool tab |
 | `script.js` | All application logic — calculations, barcode encoding, micron converter, TXT/save; calls the PDF builders |
 | `pdfTemplates.js` | Cover template PDF layouts (Clays artwork-guide style) — `pdfBuildLimp/Flaps/Jacket/CFC(state)` return a jsPDF doc |
-| `svgGenerator.js` | SVG template export (still the older layout) |
 | `config.js` | Central configuration — brand, cover type rules, spine formulas, board options, alert messages, PDF draw constants |
 
 Root assets expected alongside these files:
@@ -218,9 +217,9 @@ spine = roundMm((pages × gsm × vol) / 20000 + 0.50 + boardValue + bindingAdder
 
 ## Terminology
 
-Clays say **Paperback**, never "Limp". All user-facing text (UI, PDF/SVG templates, TXT specs, filenames) must say Paperback. The internal mode key stays `limp` (IDs such as `btn-limp`, `r-limp-*`, saved calculations); display names and filename prefixes come from `CONFIG.coverTypes[mode].label` and `.slug`.
+Clays say **Paperback**, never "Limp". All user-facing text (UI, PDF templates, TXT specs, filenames) must say Paperback. The internal mode key stays `limp` (IDs such as `btn-limp`, `r-limp-*`, saved calculations); display names and filename prefixes come from `CONFIG.coverTypes[mode].label` and `.slug`.
 
-Likewise Clays say **CFC**, not "PPC" / "Printed Paper Case". The internal mode key stays `ppc` (`btn-ppc`, `r-ppc-*`, `ppcType`, `ppcWrap`, `cvCalcPPC`, `pdfPPC`, `svgPPC`); everything users see says CFC.
+Likewise Clays say **CFC**, not "PPC" / "Printed Paper Case". The internal mode key stays `ppc` (`btn-ppc`, `r-ppc-*`, `ppcType`, `ppcWrap`, `cvCalcPPC`, `pdfBuildCFC`); everything users see says CFC.
 
 The product name is **Clays CoverSpec Studio**.
 
@@ -274,7 +273,7 @@ docH   = pH + WRAP + WRAP + 6
 safe zones: 4mm from case edge, 2mm from spine edges, 4mm from gutter (front/back)
 ```
 
-Paperback and Paperback with Flaps: no type/border within 3mm of edges (`safeZone`). Safe zones are communicated as text notes in the PDF/SVG and spec box — no guide lines (consistent with the no-bleed-guide decision).
+Paperback and Paperback with Flaps: no type/border within 3mm of edges (`safeZone`). Safe zones appear as dotted guides with notes in the PDF template and as a line in the spec box.
 
 ---
 
@@ -517,53 +516,6 @@ IDs: `btn-specs`, triggered from results card.
 
 ---
 
-## SVG Template Export
-
-Generates cover templates as native SVG files for editing in Adobe Illustrator, Affinity Designer, Affinity Publisher, InDesign, and other design applications. SVG templates are fully editable—edit guides, text, dimensions, and color fills directly in your design tool.
-
-**Format:**
-- Native vector (scalable, resolution-independent)
-- System fonts (Arial/Helvetica) for universal compatibility
-- Organized into named groups (`fills`, `guides`, `back-section`, `front-section`, `spine-section`, `notes`, `info`)
-- Viewbox in mm matching page dimensions (measured at 96 DPI)
-
-**Contents replicate PDF layout exactly:**
-- Colored section fills (back/spine/front/flaps/turn-ins/wraparound)
-- Structural guides (spine boundaries, fold lines, hinge lines, gutter lines, trim boundaries)
-- Dimension text labels (9-7px sizes for readability)
-- Production notes and spec blocks
-- Cover-type-specific annotations (flap widths, turn-in distances, board sizes, wraparound measurements)
-
-**Supported cover types:**
-- ✓ Limp / Paperback
-- ✓ Limp with Flaps (8pp)
-- ✓ Dust Jacket
-- ✓ Printed Paper Case (PPC)
-
-**Workflow:**
-1. Calculate cover specs in Clays CoverSpec Studio
-2. Click "Download SVG Template"
-3. Open `.svg` file in Illustrator, Affinity Designer, or InDesign
-4. Create artwork on layers above the template
-5. Use guides as safe-zone and fold-line references
-6. Export finished cover artwork from design tool
-
-**Text styling:**
-- Main labels (BACK COVER, FRONT COVER, SPINE): 9px, bold, dark red (#dc0000)
-- Dimension values: 7px, gray (#6e6e6e)
-- Spine values: 8px, dark red (#c80000)
-- Production notes/info: 7px, dark red (#c80000)
-
-**File naming:** `{slug}-template-{pW}x{docH}-sp{spine}.svg`
-- Paperback: `paperback-template-156x234-sp17.1.svg`
-- Flaps: `flaps-template-156x234-sp17.1.svg`
-- Jacket: `jacket-template-156x234-sp22.svg`
-- CFC: `cfc-template-156x234-sp20.svg`
-
-IDs: `btn-svg` (button), `cvDownloadSVG()` (function)
-
----
-
 ## Paper Stock Presets
 
 Optional dropdown feature (enabled via `CONFIG.features.enablePaperPresets`) pre-populates gsm and volume from common international paper stocks:
@@ -651,12 +603,11 @@ function cvFmtInt(n) { return String(Math.round(n)); }
 - **Clean branding:** Removed all references to previous white-label client (TJ Clays/TJ Books)
 - **MIT License:** Published as open-source with permissive licensing
 - **Barcode Text Customization:** ISBN barcode generator now supports toggling ISBN label, digit numbers, and EAN-5 add-on display. Font scaling (50–150%), ISBN format options (formatted vs. raw), and real-time text overflow warning when text exceeds barcode width. Improved text alignment and positioning for cleaner layout
-- **SVG Template Export:** Cover templates now export as fully-editable native SVG files for Illustrator, Affinity Designer, and InDesign. All four cover types (Limp, Flaps, Jacket, PPC) supported with organized layer structure, matching PDF layout exactly, system fonts for universal compatibility, and cover-type-specific annotations
 - **Standard Sizes Reference:** New reference tab displaying UK and European standard book trim sizes (A-Format through A4) with binding types and use cases. Sourced from comprehensive book sizes research document
 - **Spine Warning Updates:** Spine alert messages now reference binding machine limits (Min 2mm – Max 65mm recommended) and suggest contacting printer or considering lower grammage paper as alternatives
 - **Flaps Width Constraint Removed:** Removed 580mm maximum document width constraint for 8pp flap covers, allowing greater flexibility for varied production scenarios
-- **Clays PDF layout:** PDF templates rebuilt in `pdfTemplates.js` after Clays' reference artwork guides — slate/ink palette, dotted safe zones, dimension arrows, job-specific notes. SVG export not yet updated.
-- **SVG Notes Position:** Notes text at top of SVG templates moved down 10mm for improved spacing and readability
+- **SVG export removed** (Oct 2026) — PDF template is the only template download.
+- **Clays PDF layout:** PDF templates rebuilt in `pdfTemplates.js` after Clays' reference artwork guides — slate/ink palette, dotted safe zones, dimension arrows, job-specific notes.
 
 ---
 
@@ -701,38 +652,6 @@ CONFIG.features.enableSaveHistory = true  // enables saved calculations
 ```
 
 Saved calculations appear in a dropdown at the bottom of the form. Users can load, rename (by re-saving), or delete. No limit on number of saved calculations.
-
----
-
-## SVG Workflow & Best Practices
-
-**When to use SVG vs. PDF:**
-- **SVG:** Preferred for interactive editing in Illustrator, Affinity Designer, InDesign. Layers and groups are native SVG elements you can show/hide, lock/unlock, modify. Best for complex layouts or iterative design.
-- **PDF:** Use as a reference guide layer when you want an immutable overlay. Lighter-weight for simple layouts.
-
-**SVG layer structure:**
-All SVG templates organize content into logical groups:
-- `fills` — Colored section backgrounds
-- `guides` — Spine/fold/hinge/gutter lines (lock this layer when working on artwork)
-- `[section]-section` — Labels and dimensions for back/front/spine (safe to delete)
-- `notes`, `info` — Production text (delete or keep as reference)
-
-**Best practice workflow:**
-1. Download SVG template from Clays CoverSpec Studio
-2. Open in your design application (Illustrator, Affinity, InDesign)
-3. Lock the `guides` layer (prevents accidental moving)
-4. Create a new layer above guides for artwork
-5. Use guide lines as visual references for safe zones, fold positions, bleed areas
-6. Import artwork into your new layer
-7. Delete or hide the text/notes groups if not needed
-8. Export final artwork from design tool
-
-**Editing in-place:**
-You can edit template elements directly if needed:
-- Modify text labels to match your branding
-- Adjust fill colors to match proof stage (e.g., pink for live files, gray for proofs)
-- Reposition dimension notes to avoid artwork
-- Add your own guides or annotations
 
 ---
 

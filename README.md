@@ -16,13 +16,10 @@ Production-ready cover specifications made instant. A free, browser-based toolki
 **Cover Templates**
 - Calculate exact dimensions for four binding types: limp cover, limp with flaps, dust jacket, and printed paper case (PPC)
 - Automatically compute spine width from paper specifications (gsm, volume, extent)
-- Generate to-scale vector templates in two formats:
-  - **PDF templates** with red text guides for use as reference layers
-  - **SVG templates** fully editable in Illustrator, Affinity Designer, or InDesign with organized layers, all guides, and pre-configured dimensions
+- Generate to-scale vector **PDF templates** in Clays' artwork-guide style — safe zones, fold and turn-in guides, and job-specific dimensions — for use as a guide layer
 - Customizable production constraints and alerts
 - **Paper Stock Presets** — select from common stocks or enter custom values
 - **Save Calculations** — manually save specs you want to reuse with custom names
-- **SVG & PDF exports** — both available for each cover type
 
 **Micron → Volume Converter**
 - Convert paper thickness (microns) to paper volume (bulk factor)
@@ -63,9 +60,9 @@ All four tools run entirely in the browser with no server backend. The applicati
 ```
 .
 ├── index.html          # Markup, CSS, tab navigation
-├── script.js           # All application logic (calculations, PDF generation, barcode encoding)
+├── script.js           # Application logic (calculations, barcode encoding, specs/save)
+├── pdfTemplates.js     # PDF cover template layouts
 ├── config.js           # Central configuration (branding, cover rules, alerts, production limits)
-├── svgGenerator.js     # SVG template generation for all cover types
 ├── logo.png            # Brand logo (32–36px, transparent background) — optional
 ├── favicon-32x32.png   # Browser tab icon
 ├── favicon-16x16.png   # Browser tab icon
@@ -92,7 +89,6 @@ The generated templates are trim size (no bleed padding) with spine boundaries, 
 
 **Downloads:**
 - **PDF Template:** Vector PDF with red text guides, ready to use as a reference layer in InDesign, Affinity Publisher, or Illustrator
-- **SVG Template:** Fully editable native vector file for Illustrator, Affinity Designer, or InDesign with organized layer structure, all guides, dimensions, and section fills pre-configured. Open directly and place artwork on top.
 - **TXT Specs:** Text file with all calculated dimensions and cover specifications for reference
 
 ### Micron to Volume
@@ -208,21 +204,6 @@ The app ships with "Clays CoverSpec Studio" and "Production-Ready Cover Specs" a
 6. Enable/disable features in `CONFIG.features`
 7. Update PDF template titles in `CONFIG.coverTypes[mode].templateTitle` if needed
 8. All changes apply immediately—no code modifications needed
-
-## PDF vs. SVG Templates
-
-Both formats are available for every cover type. Choose based on your workflow:
-
-| Aspect | PDF | SVG |
-|--------|-----|-----|
-| **Editability** | Reference layer (read-only in most cases) | Fully editable layer structure |
-| **Best for** | Quick reference, simple layouts | Iterative design, complex artwork |
-| **Tools** | InDesign, Illustrator, Affinity (as layer) | Illustrator, Affinity Designer, InDesign (native) |
-| **Layers** | Single flat PDF | Organized groups (fills, guides, labels) |
-| **Editing guides** | Not without PDF editor | Lock/show/hide as needed |
-| **Text** | Red, fixed | Red, editable, or deletable |
-
-**Recommendation:** Use SVG for most workflows—it's more flexible and integrates directly into your design tools. Use PDF if you need an immutable reference layer.
 
 ## Spine Calculation Formulas
 
