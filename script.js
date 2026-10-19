@@ -1,0 +1,962 @@
+/* ═══════════════════════════════════════════════════════════════════
+   script.js — Cover Layout Creator
+   Spine calculations, PDF generation, barcode encoding, micron
+   converter. Requires config.js and jsPDF to be loaded first.
+═══════════════════════════════════════════════════════════════════ */
+
+// ── Embedded Noto Sans font (subsetted: digits, hyphen, space, I S B N) ──────
+const NOTO_SANS_B64 = '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';
+
+function registerEmbeddedFont(pdf) {
+  pdf.addFileToVFS('NotoSans-Regular.ttf', NOTO_SANS_B64);
+  pdf.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EAN-13 / EAN-5 / EAN-2 ENCODING
+// ═══════════════════════════════════════════════════════════════════
+
+const L_PAT = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const G_PAT = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+const R_PAT = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+const EAN13_PARITY = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+const EAN5_PARITY  = ['GGLLL','GLGLL','GLLGL','GLLLG','LGGLL','LLGGL','LLLGG','LGLGL','LLGLG','LGLLL'];
+const EAN2_PARITY  = ['LL','LG','GL','GG'];
+
+function encodeEAN13(digits13) {
+  const d = digits13.split('').map(Number);
+  const parity = EAN13_PARITY[d[0]];
+  let bits = '101';
+  for (let i = 0; i < 6; i++) bits += parity[i]==='L' ? L_PAT[d[i+1]] : G_PAT[d[i+1]];
+  bits += '01010';
+  for (let i = 7; i <= 12; i++) bits += R_PAT[d[i]];
+  return bits + '101';
+}
+function encodeEAN5(digits5) {
+  const d = digits5.split('').map(Number);
+  const check = (3*d[0]+9*d[1]+3*d[2]+9*d[3]+3*d[4]) % 10;
+  const parity = EAN5_PARITY[check];
+  let bits = '01011';
+  for (let i = 0; i < 5; i++) { if(i>0)bits+='01'; bits += parity[i]==='L' ? L_PAT[d[i]] : G_PAT[d[i]]; }
+  return bits;
+}
+function encodeEAN2(digits2) {
+  const d = digits2.split('').map(Number);
+  const parity = EAN2_PARITY[(d[0]*10+d[1]) % 4];
+  let bits = '01011';
+  for (let i = 0; i < 2; i++) { if(i>0)bits+='01'; bits += parity[i]==='L' ? L_PAT[d[i]] : G_PAT[d[i]]; }
+  return bits;
+}
+function encodeAddon(addon) {
+  if (addon.length===2) return { bits: encodeEAN2(addon), modules:20, digitCount:2 };
+  if (addon.length===5) return { bits: encodeEAN5(addon), modules:47, digitCount:5 };
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ISBN UTILITIES
+// ═══════════════════════════════════════════════════════════════════
+
+function stripNonDigits(s) { return s.replace(/[^0-9]/g,''); }
+
+function ean13CheckDigit(digits12) {
+  let sum = 0;
+  for (let i=0;i<12;i++) sum += parseInt(digits12[i]) * (i%2===0?1:3);
+  return ((10-(sum%10))%10).toString();
+}
+
+function validateAndNormalise(raw) {
+  const digits = stripNonDigits(raw);
+  if (digits.length===13) {
+    if (!digits.startsWith('978') && !digits.startsWith('979'))
+      return { error: 'ISBN-13 must begin with 978 or 979.' };
+    const expected = ean13CheckDigit(digits.slice(0,12));
+    if (digits[12]!==expected)
+      return { error: 'Invalid check digit. Expected '+expected+', got '+digits[12]+'.' };
+    return { digits13: digits };
+  }
+  return { error: 'Enter 13 digits (hyphens ignored). Got '+digits.length+' digit(s).' };
+}
+
+function formatISBNDisplay(digits13) {
+  const p = digits13;
+  return 'ISBN '+p.slice(0,3)+'-'+p[3]+'-'+p.slice(4,7)+'-'+p.slice(7,12)+'-'+p[12];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BARCODE CANVAS RENDERER
+// ═══════════════════════════════════════════════════════════════════
+
+function renderBarcodeToContext(ctx, digits13, addon, originX, originY, widthPx, heightPx, options={}) {
+  const addonEncoded = addon ? encodeAddon(addon) : null;
+  const hasAddon = !!addonEncoded;
+  const showLabel = options.showLabel !== false;
+  const showDigits = options.showDigits !== false;
+  const showAddonDigits = options.showAddonDigits !== false;
+  const fontScale = options.fontScale || 1.0;
+  const isbnFormat = options.isbnFormat || 'formatted';
+  const topLabel = isbnFormat === 'formatted' ? formatISBNDisplay(digits13) : 'ISBN '+digits13;
+
+  function setFont(size, bold) {
+    ctx.font = (bold?'bold ':'')+size+'px "Helvetica Neue",Helvetica,Arial,sans-serif';
+  }
+
+  const topFontSize = Math.max(1, heightPx*0.072*fontScale);
+  const numFontSize = Math.max(1, heightPx*0.080*fontScale);
+  const topTextH    = showLabel ? Math.round(topFontSize*1.5) : 0;
+  const bottomTextH = showDigits ? Math.round(numFontSize*1.6) : 0;
+  const barAreaH    = heightPx - topTextH - bottomTextH;
+  const guardExtend = Math.round(bottomTextH*0.55);
+  const mainBarH    = barAreaH;
+  const guardBarH   = barAreaH + guardExtend;
+
+  const mainModules  = 113;
+  const addonModules = hasAddon ? (5 + addonEncoded.modules) : 0;
+  const moduleW = widthPx / (mainModules + addonModules);
+
+  const barcodeStartX = originX + 11*moduleW;
+  const barY          = originY + topTextH;
+  const addonStartX   = barcodeStartX + 100*moduleW;
+
+  const mainBits = encodeEAN13(digits13);
+
+  function isGuardModule(idx) {
+    return (idx<=2)||(idx>=45&&idx<=49)||(idx>=92&&idx<=94);
+  }
+
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(originX, originY, widthPx, heightPx);
+  ctx.fillStyle='#000000';
+
+  for (let i=0;i<mainBits.length;i++) {
+    if (mainBits[i]==='1') {
+      ctx.fillRect(barcodeStartX+i*moduleW, barY, moduleW, isGuardModule(i)?guardBarH:mainBarH);
+    }
+  }
+
+  if (hasAddon && showAddonDigits) {
+    const {bits:addonBits, digitCount} = addonEncoded;
+    const addonNumFontSz = Math.max(5, Math.min(barAreaH*0.18, (addonEncoded.modules*moduleW)/digitCount*0.75)*fontScale);
+    setFont(addonNumFontSz);
+    ctx.textBaseline='top'; ctx.textAlign='center';
+    const addonNumY = barY + barAreaH*0.03;
+    const addonBarTopY = addonNumY + addonNumFontSz*1.25;
+    for (let i=0;i<digitCount;i++) {
+      const bitStart = 5+i*9;
+      ctx.fillText(addon[i], addonStartX+(bitStart+3.5)*moduleW, addonNumY);
+    }
+    for (let i=0;i<addonBits.length;i++) {
+      if(addonBits[i]==='1') ctx.fillRect(addonStartX+i*moduleW, addonBarTopY, moduleW, mainBarH*0.5);
+    }
+  } else if (hasAddon) {
+    const {bits:addonBits} = addonEncoded;
+    for (let i=0;i<addonBits.length;i++) {
+      if(addonBits[i]==='1') {
+        const addonBarTopY = barY + barAreaH*0.5;
+        ctx.fillRect(addonStartX+i*moduleW, addonBarTopY, moduleW, mainBarH*0.5);
+      }
+    }
+  }
+
+  const firstDigitX = originX+(barcodeStartX-originX)*0.5;
+  const labelX = originX + 4*moduleW;
+
+  if (showLabel) {
+    setFont(topFontSize, true);
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(topLabel, labelX, originY+topTextH*0.5);
+  }
+
+  if (showDigits) {
+    setFont(numFontSize);
+    ctx.textBaseline='middle'; ctx.textAlign='center';
+    const guardBottomY = barY + guardBarH;
+    const numY = guardBottomY + bottomTextH*0.02;
+
+    ctx.fillText(digits13[0], firstDigitX, numY);
+    for (let i=0;i<6;i++) ctx.fillText(digits13[i+1], barcodeStartX+(3+i*7+3.5)*moduleW, numY);
+    for (let i=0;i<6;i++) ctx.fillText(digits13[i+7], barcodeStartX+(50+i*7+3.5)*moduleW, numY);
+  }
+}
+
+function renderBarcode(canvas, digits13, addon, widthPx, heightPx, options={}) {
+  canvas.width=widthPx; canvas.height=heightPx;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,widthPx,heightPx);
+  renderBarcodeToContext(ctx, digits13, addon, 0, 0, widthPx, heightPx, options);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BARCODE PDF RENDERER
+// ═══════════════════════════════════════════════════════════════════
+
+function renderBarcodeToPDF(pdf, digits13, addon, originX, originY, wMM, hMM, options={}) {
+  const addonEncoded = addon ? encodeAddon(addon) : null;
+  const hasAddon = !!addonEncoded;
+  const showLabel = options.showLabel !== false;
+  const showDigits = options.showDigits !== false;
+  const showAddonDigits = options.showAddonDigits !== false;
+  const fontScale = options.fontScale || 1.0;
+  const isbnFormat = options.isbnFormat || 'formatted';
+  const topLabel = isbnFormat === 'formatted' ? formatISBNDisplay(digits13) : 'ISBN '+digits13;
+
+  const topFontMM   = Math.max(0.5, hMM*0.072*fontScale);
+  const numFontMM   = Math.max(0.5, hMM*0.080*fontScale);
+  const topTextH    = showLabel ? topFontMM*1.5 : 0;
+  const bottomTextH = showDigits ? numFontMM*1.6 : 0;
+  const barAreaH    = hMM - topTextH - bottomTextH;
+  const guardExtend = bottomTextH*0.55;
+  const mainBarH    = barAreaH;
+  const guardBarH   = barAreaH + guardExtend;
+
+  const mainModules  = 113;
+  const addonModules = hasAddon ? (5+addonEncoded.modules) : 0;
+  const moduleW = wMM / (mainModules+addonModules);
+
+  const barcodeStartX = originX + 11*moduleW;
+  const barY          = originY + topTextH;
+  const addonStartX   = barcodeStartX + 100*moduleW;
+
+  const mainBits = encodeEAN13(digits13);
+
+  function isGuardModule(idx) {
+    return (idx<=2)||(idx>=45&&idx<=49)||(idx>=92&&idx<=94);
+  }
+
+  pdf.setFillColor(255,255,255);
+  pdf.rect(originX, originY, wMM, hMM, 'F');
+  pdf.setFillColor(0,0,0);
+
+  for (let i=0;i<mainBits.length;i++) {
+    if (mainBits[i]==='1') {
+      pdf.rect(barcodeStartX+i*moduleW, barY, moduleW, isGuardModule(i)?guardBarH:mainBarH, 'F');
+    }
+  }
+
+  if (hasAddon && showAddonDigits) {
+    const {bits:addonBits, digitCount} = addonEncoded;
+    const addonNumFontMM = Math.max(1.5, Math.min(barAreaH*0.18, (addonEncoded.modules*moduleW)/digitCount*0.75)*fontScale);
+    pdf.setFontSize(addonNumFontMM*2.8346);
+    const addonNumY    = barY + barAreaH*0.03;
+    const addonBarTopY = addonNumY + addonNumFontMM*1.25;
+    for (let i=0;i<digitCount;i++) {
+      pdf.text(addon[i], addonStartX+(5+i*9+3.5)*moduleW, addonNumY+addonNumFontMM, {align:'center'});
+    }
+    for (let i=0;i<addonBits.length;i++) {
+      if(addonBits[i]==='1') pdf.rect(addonStartX+i*moduleW, addonBarTopY, moduleW, mainBarH*0.5, 'F');
+    }
+  } else if (hasAddon) {
+    const {bits:addonBits} = addonEncoded;
+    for (let i=0;i<addonBits.length;i++) {
+      if(addonBits[i]==='1') {
+        const addonBarTopY = barY + barAreaH*0.5;
+        pdf.rect(addonStartX+i*moduleW, addonBarTopY, moduleW, mainBarH*0.5, 'F');
+      }
+    }
+  }
+
+  const firstDigitX = originX+(barcodeStartX-originX)*0.5;
+  const labelX = originX + 4*moduleW;
+
+  if (showLabel) {
+    pdf.setFontSize(topFontMM*1.15*2.8346);
+    pdf.text(topLabel, labelX, originY+topTextH*0.5+topFontMM*0.35);
+  }
+
+  if (showDigits) {
+    pdf.setFontSize(numFontMM*2.8346);
+    const guardBottomY = barY + guardBarH;
+    const numY = guardBottomY + bottomTextH*0.02;
+
+    pdf.text(digits13[0], firstDigitX, numY, {align:'center'});
+    for (let i=0;i<6;i++) pdf.text(digits13[i+1], barcodeStartX+(3+i*7+3.5)*moduleW, numY, {align:'center'});
+    for (let i=0;i<6;i++) pdf.text(digits13[i+7], barcodeStartX+(50+i*7+3.5)*moduleW, numY, {align:'center'});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BARCODE UI
+// ═══════════════════════════════════════════════════════════════════
+
+let bcDigits13 = '', bcAddon = '';
+
+function mmToPx(mm, dpi) { return Math.round(mm*dpi/25.4); }
+function bcGetNum(id, fb) { const v=parseFloat(document.getElementById(id).value); return isNaN(v)?fb:v; }
+function bcWidthMM()  { return Math.min(100, Math.max(20, bcGetNum('bcWidth',  38))); }
+function bcHeightMM() { return Math.min(80,  Math.max(5,  bcGetNum('bcHeight', 27))); }
+
+function bcCheckTextFit(digits13, fontScale) {
+  if (!digits13) return true;
+  const isbnFormat = document.getElementById('bcIsbnFormat').value;
+  const topLabel = isbnFormat === 'formatted' ? formatISBNDisplay(digits13) : 'ISBN '+digits13;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const fontSizePx = Math.max(1, mmToPx(bcHeightMM(), 96)*0.072*fontScale);
+  ctx.font = 'bold '+fontSizePx+'px "Helvetica Neue",Helvetica,Arial,sans-serif';
+  const textWidth = ctx.measureText(topLabel).width;
+
+  const barcodeWidthPx = mmToPx(bcWidthMM(), 96);
+  const padding = barcodeWidthPx * 0.15;
+
+  return textWidth < (barcodeWidthPx - padding);
+}
+
+function bcShowError(msg) {
+  const el = document.getElementById('bc-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function bcHideError() { document.getElementById('bc-error').style.display = 'none'; }
+
+function bcUpdatePreview() {
+  const raw   = document.getElementById('bcIsbn').value.trim();
+  const addon = document.getElementById('bcAddon').value.trim().replace(/\D/g,'');
+
+  if (!raw) { bcHideError(); document.getElementById('bc-preview-wrap').style.display='none'; document.getElementById('bc-download').disabled=true; return; }
+
+  const result = validateAndNormalise(raw);
+  if (result.error) { bcShowError(result.error); document.getElementById('bc-preview-wrap').style.display='none'; document.getElementById('bc-download').disabled=true; return; }
+
+  if (addon && addon.length!==5) { bcShowError('Add-on must be exactly 5 digits.'); return; }
+
+  bcHideError();
+  bcDigits13 = result.digits13;
+  bcAddon    = addon || '';
+
+  const wPx = mmToPx(bcWidthMM(), 96);
+  const hPx = mmToPx(bcHeightMM(), 96);
+  const canvas = document.getElementById('bc-canvas');
+
+  const fontScale = parseFloat(document.getElementById('bcFontScale').value) / 100;
+  const showLabel = document.getElementById('bcShowLabel').checked;
+
+  const options = {
+    showLabel: showLabel,
+    showDigits: document.getElementById('bcShowDigits').checked,
+    showAddonDigits: document.getElementById('bcShowAddonDigits').checked,
+    fontScale: fontScale,
+    isbnFormat: document.getElementById('bcIsbnFormat').value
+  };
+
+  renderBarcode(canvas, bcDigits13, bcAddon, wPx, hPx, options);
+  document.getElementById('bc-preview-wrap').style.display = 'block';
+  document.getElementById('bc-download').disabled = false;
+  document.getElementById('bc-size-label').textContent = `${bcWidthMM()} × ${bcHeightMM()} mm`;
+
+  if (showLabel && !bcCheckTextFit(bcDigits13, fontScale)) {
+    bcShowError('⚠ Text size exceeds barcode width. Reduce font size or increase barcode width.');
+  }
+}
+
+function bcDownloadPDF() {
+  if (!bcDigits13) return;
+  const {jsPDF} = window.jspdf;
+  const wMM = bcWidthMM(), hMM = bcHeightMM();
+  const pdf = new jsPDF({ orientation: wMM>hMM?'landscape':'portrait', unit:'mm', format:[wMM,hMM], putOnlyUsedFonts:true });
+  registerEmbeddedFont(pdf);
+  pdf.setFont('NotoSans','normal');
+
+  const options = {
+    showLabel: document.getElementById('bcShowLabel').checked,
+    showDigits: document.getElementById('bcShowDigits').checked,
+    showAddonDigits: document.getElementById('bcShowAddonDigits').checked,
+    fontScale: parseFloat(document.getElementById('bcFontScale').value) / 100,
+    isbnFormat: document.getElementById('bcIsbnFormat').value
+  };
+
+  renderBarcodeToPDF(pdf, bcDigits13, bcAddon, 0, 0, wMM, hMM, options);
+  pdf.save('isbn-'+bcDigits13+(bcAddon?'-'+bcAddon:'')+'.pdf');
+}
+
+function bcClear() {
+  ['bcIsbn','bcAddon'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('bcWidth').value = '38';
+  document.getElementById('bcHeight').value = '27';
+  document.getElementById('bcShowLabel').checked = true;
+  document.getElementById('bcShowDigits').checked = true;
+  document.getElementById('bcShowAddonDigits').checked = true;
+  document.getElementById('bcFontScale').value = '100';
+  document.getElementById('bcIsbnFormat').value = 'formatted';
+  bcDigits13=''; bcAddon='';
+  bcHideError();
+  document.getElementById('bc-preview-wrap').style.display='none';
+  document.getElementById('bc-download').disabled=true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MICRON TO VOLUME CALCULATOR
+// ═══════════════════════════════════════════════════════════════════
+
+function mvCalculate() {
+  const micron   = parseFloat(document.getElementById('mv-micron').value);
+  const grammage = parseFloat(document.getElementById('mv-gsm').value);
+
+  if (isNaN(micron)||isNaN(grammage)||micron<=0||grammage<=0) {
+    document.getElementById('mv-result-wrap').style.display='none';
+    document.getElementById('mv-copy').disabled=true;
+    return;
+  }
+  const volume = (micron/grammage)*10;
+  document.getElementById('mv-volume').textContent = volume.toFixed(1);
+  document.getElementById('mv-result-wrap').style.display='block';
+  document.getElementById('mv-copy').disabled=false;
+}
+
+function mvCopy() {
+  const micron   = document.getElementById('mv-micron').value;
+  const gsm      = document.getElementById('mv-gsm').value;
+  const volume   = document.getElementById('mv-volume').textContent;
+  const text     = `Micron: ${micron} µ\nGrammage: ${gsm} gsm\nVolume: ${volume}`;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('mv-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(()=>{ btn.textContent='Copy Result'; }, 2000);
+  });
+}
+
+function mvClear() {
+  ['mv-micron','mv-gsm'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('mv-result-wrap').style.display='none';
+  document.getElementById('mv-copy').disabled=true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COVER CALCULATOR — helpers
+// ═══════════════════════════════════════════════════════════════════
+
+function cvVal(id) { return parseFloat(document.getElementById(id).value)||0; }
+function cvFmt(n,d=1) { const f=parseFloat(n.toFixed(d)); return d===1?f.toFixed(1):String(f); }
+function cvFmtInt(n)  { return String(Math.round(n)); }
+
+// Text-block bulk (no cover, board or binding allowance) — Clays' bulk limits apply to this
+function cvCalcBulk(pages,gsm,vol) {
+  if(pages<=0||gsm<=0||vol<=0) return 0;
+  return Math.round((pages*gsm*vol)/20000*10)/10;
+}
+
+function cvCalcSpine(pages,gsm,vol,baseline,bindAdder=0,roundMm=false) {
+  if(pages<=0||gsm<=0||vol<=0) return 0;
+  const raw = (pages*gsm*vol)/20000 + baseline + bindAdder;
+  return roundMm ? Math.round(raw) : Math.round(raw*10)/10;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COVER CALCULATOR — mode state & calculate()
+// ═══════════════════════════════════════════════════════════════════
+
+let cvMode  = 'limp';
+let cvState = null;
+
+const CORE_IDS = ['pHeight','pWidth','gsm','volume','numPages'];
+
+function cvPopulateBoardSelect() {
+  const sel = document.getElementById('boardThickness');
+  sel.innerHTML = '';
+  CONFIG.boardThicknesses.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.value;
+    opt.textContent = b.label;
+    sel.appendChild(opt);
+  });
+}
+
+function cvInit() {
+  cvPopulateBoardSelect();
+  cvPopulatePaperPresets();
+  cvUpdateSavedUI();
+  CORE_IDS.forEach(id=>document.getElementById(id).addEventListener('input',cvCalculate));
+  ['flapWidth','jacketFlapWidth','binding','boardThickness','ppcType'].forEach(id=>
+    document.getElementById(id).addEventListener('input',cvCalculate));
+  cvCalculate();
+}
+
+function cvSetMode(m) {
+  cvMode = m;
+  ['limp','flaps','jacket','ppc'].forEach(k=>{
+    document.getElementById('btn-'+k).classList.toggle('active',k===m);
+  });
+  const show=(id,vis)=>document.getElementById(id).classList.toggle('visible',vis);
+  show('sec-flapWidth',      m==='flaps');
+  show('sec-jacketFlap',     m==='jacket');
+  show('sec-binding',        m==='jacket'||m==='ppc');
+  show('sec-boardThickness', m==='jacket'||m==='ppc');
+  show('sec-ppcType',        m==='ppc');
+  show('sec-ppcWrap',        m==='ppc');
+  if(m==='ppc') document.getElementById('ppcWrap').value=CONFIG.coverTypes.ppc.wrap;
+  ['limp','flaps','jacket','ppc'].forEach(k=>{
+    document.getElementById('results-'+k).style.display=k===m?'':'none';
+  });
+  const notes={
+    limp:   'PDF page = trim size. Hinge & spine guides included.',
+    flaps:  'PDF page = trim size incl. flaps. Score & spine guides included.',
+    jacket: 'PDF page = trim size incl. flaps & turn-ins. Fold guides included.',
+    ppc:    'PDF page = full document size incl. turn-ins. Gutter & fold guides included.',
+  };
+  document.getElementById('footer-note').textContent=notes[m];
+  cvCalculate();
+}
+
+function cvShowAlert(id,show) { document.getElementById(id).classList.toggle('show',show); }
+
+// Flags bulk outside CONFIG.coverTypes[mode].minBulkMm / maxBulkMm and reds the spine value
+function cvCheckBulk(mode,pages,gsm,vol,spEl) {
+  const ct=CONFIG.coverTypes[mode], bulk=cvCalcBulk(pages,gsm,vol);
+  const kind=(mode==='jacket'||mode==='ppc')?'cased':'paperback';
+  const fill=t=>t.replace('{bulk}',cvFmt(bulk)).replace('{min}',ct.minBulkMm).replace('{max}',ct.maxBulkMm).replace('{type}',kind);
+  const over=bulk>ct.maxBulkMm, under=bulk>0&&bulk<ct.minBulkMm;
+  if(over)  { document.getElementById('alert-bulk-max').textContent=fill(CONFIG.alerts.bulkMax); cvShowAlert('alert-bulk-max',true); }
+  if(under) { document.getElementById('alert-bulk-min').textContent=fill(CONFIG.alerts.bulkMin); cvShowAlert('alert-bulk-min',true); }
+  spEl.style.color=(over||under)?'var(--red)':'';
+  return bulk;
+}
+
+function cvClearAlerts() {
+  ['alert-bulk-max','alert-bulk-min',
+   'alert-flap-min','alert-flap-max','alert-jktflap-min','alert-jktflap-max','alert-board-req','alert-required-fields']
+  .forEach(id=>cvShowAlert(id,false));
+}
+
+function cvSetResult(id,val) { document.getElementById(id).textContent=val!==null?val:'—'; }
+
+function cvUpdateSpec(hasData,rows) {
+  const el=document.getElementById('pdf-spec'), em=document.getElementById('pdf-spec-empty');
+  if(!hasData){el.classList.add('hidden');em.style.display='';return;}
+  el.classList.remove('hidden');em.style.display='none';
+  el.innerHTML=Object.entries(rows).filter(([,v])=>v!==null).map(([k,v])=>`${k}: <span>${v}</span>`).join('<br>');
+}
+
+function cvCalculate() {
+  cvClearAlerts();
+  const pH=cvVal('pHeight'),pW=cvVal('pWidth');
+  const gsm=cvVal('gsm'),vol=cvVal('volume'),pages=cvVal('numPages');
+  const hasCore=pW>0&&pH>0;
+
+  // Check for required fields (mode-specific only) — only if user has entered dimensions
+  if(hasCore) {
+    const flapWidth=cvVal('flapWidth');
+    const jacketFlapWidth=cvVal('jacketFlapWidth');
+
+    let requiredFieldsMissing=false;
+    if(cvMode==='flaps'&&flapWidth<=0) requiredFieldsMissing=true;
+    if(cvMode==='jacket'&&(jacketFlapWidth<=0)) requiredFieldsMissing=true;
+
+    if(requiredFieldsMissing) cvShowAlert('alert-required-fields',true);
+  }
+
+  if      (cvMode==='limp')   cvCalcLimp(pH,pW,gsm,vol,pages,hasCore);
+  else if (cvMode==='flaps')  cvCalcFlaps(pH,pW,gsm,vol,pages,hasCore);
+  else if (cvMode==='jacket') cvCalcJacket(pH,pW,gsm,vol,pages,hasCore);
+  else if (cvMode==='ppc')    cvCalcPPC(pH,pW,gsm,vol,pages,hasCore);
+  document.getElementById('btn-download').disabled=!cvState;
+  document.getElementById('btn-svg').disabled=!cvState;
+  document.getElementById('btn-specs').disabled=!cvState;
+  document.getElementById('btn-save-calc').disabled=!cvState;
+}
+
+// ── LIMP ─────────────────────────────────────────────────────────
+function cvCalcLimp(pH,pW,gsm,vol,pages,hasCore) {
+  const spine=cvCalcSpine(pages,gsm,vol,0.65);
+  const docW=hasCore?pW*2+spine:0, docH=pH;
+  cvSetResult('r-limp-spine', spine>0||hasCore?cvFmt(spine):null);
+  cvSetResult('r-limp-docW',  hasCore?cvFmt(docW):null);
+  cvSetResult('r-limp-docH',  hasCore?cvFmt(docH):null);
+  const spEl=document.getElementById('r-limp-spine');
+  const bulk=cvCheckBulk('limp',pages,gsm,vol,spEl);
+  cvUpdateSpec(hasCore,{
+    'Doc Size':  hasCore?`${cvFmt(docH)} × ${cvFmt(docW)} mm`:null,
+    'Page Size': hasCore?`${cvFmt(docH)} × ${cvFmt(pW)} mm`:null,
+    'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,
+    'Spine': cvFmt(spine)+' mm', 'Hinge':'3mm each side of spine',
+    'Safe zone':`No type/border within ${CONFIG.coverTypes.limp.safeZone}mm of edges`, 'Bleed':'Add 3mm to all edges',
+  });
+  cvState=hasCore?{mode:'limp',pH,pW,spine,docW,docH}:null;
+}
+
+// ── FLAPS ─────────────────────────────────────────────────────────
+function cvCalcFlaps(pH,pW,gsm,vol,pages,hasCore) {
+  const spine=cvCalcSpine(pages,gsm,vol,0.65);
+  const coverW=hasCore?pW+1:0, flapW=cvVal('flapWidth');
+  const docW=hasCore?flapW+coverW+spine+coverW+flapW:0, docH=pH;
+  cvSetResult('r-flaps-spine',  spine>0||hasCore?cvFmt(spine):null);
+  cvSetResult('r-flaps-coverW', hasCore?cvFmt(coverW):null);
+  cvSetResult('r-flaps-docW',   hasCore?cvFmt(docW):null);
+  cvSetResult('r-flaps-docH',   hasCore?cvFmt(docH):null);
+  const spEl=document.getElementById('r-flaps-spine');
+  const bulk=cvCheckBulk('flaps',pages,gsm,vol,spEl);
+  if(flapW>0&&flapW<90) cvShowAlert('alert-flap-min',true);
+  if(flapW>0&&pW>0&&flapW>pW-10) cvShowAlert('alert-flap-max',true);
+  document.getElementById('flap-hint').textContent=pW>0?`Min 90mm — max ${pW-10}mm`:'Min 90mm — max = page width − 10mm';
+  cvUpdateSpec(hasCore&&flapW>0,{
+    'Doc Size':   hasCore?`${cvFmt(docH)} × ${cvFmt(docW)} mm`:null,
+    'Cover Panel':hasCore?`${cvFmt(docH)} × ${cvFmt(coverW)} mm (+1mm tolerance)`:null,
+    'Flap Width': flapW>0?`${cvFmt(flapW)} mm each`:null,
+    'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,
+    'Spine':cvFmt(spine)+' mm','Score lines':'At flap/cover boundaries',
+    'Safe zone':`No type/border within ${CONFIG.coverTypes.flaps.safeZone}mm of edges`,'Bleed':'Add 3mm to all edges',
+  });
+  cvState=(hasCore&&flapW>0)?{mode:'flaps',pH,pW,spine,coverW,flapW,docW,docH}:null;
+}
+
+// ── JACKET ────────────────────────────────────────────────────────
+function cvCalcJacket(pH,pW,gsm,vol,pages,hasCore) {
+  const bindAdder=parseFloat(document.getElementById('binding').value)||0;
+  const boardVal=parseFloat(document.getElementById('boardThickness').value)||0;
+  const spine=cvCalcSpine(pages,gsm,vol,0.50,bindAdder+boardVal,true);
+  // Flap width as entered includes the turn-in (Clays: "flap including 10mm of colour turn-in")
+  const coverW=hasCore?pW+CONFIG.coverTypes.jacket.boardOverhang:0, flapW=cvVal('jacketFlapWidth'), TURN=CONFIG.coverTypes.jacket.turnIn;
+  const docW=hasCore?flapW+coverW+spine+coverW+flapW:0, docH=hasCore?pH+6:0;
+  cvSetResult('r-jkt-spine',  spine>0||hasCore?cvFmtInt(spine):null);
+  cvSetResult('r-jkt-coverW', hasCore?cvFmt(coverW):null);
+  cvSetResult('r-jkt-docW',   hasCore?cvFmtInt(docW):null);
+  cvSetResult('r-jkt-docH',   hasCore?cvFmtInt(docH):null);
+  const spEl=document.getElementById('r-jkt-spine');
+  const bulk=cvCheckBulk('jacket',pages,gsm,vol,spEl);
+  if(boardVal===0&&hasCore) cvShowAlert('alert-board-req',true);
+  if(flapW>0&&flapW<CONFIG.coverTypes.jacket.flapMin) cvShowAlert('alert-jktflap-min',true);
+  if(flapW>0&&flapW>CONFIG.coverTypes.jacket.flapMax) cvShowAlert('alert-jktflap-max',true);
+  cvUpdateSpec(hasCore&&flapW>0,{
+    'Doc Size':   hasCore?`${cvFmtInt(docH)} × ${cvFmtInt(docW)} mm`:null,
+    'Cover Panel':hasCore?`${cvFmtInt(docH)} × ${cvFmt(coverW)} mm (trim +${CONFIG.coverTypes.jacket.boardOverhang}mm)`:null,
+    'Flap Width': flapW>0?`${cvFmt(flapW)} mm each (incl. ${TURN}mm turn-in)`:null,
+    'Board':boardVal>0?`${boardVal}mm (both boards combined)`:'Not selected',
+    'Turn-in':`${TURN}mm of colour turn-in within each flap`,
+    'Safe zone':`No type/border within ${CONFIG.coverTypes.jacket.safeZone}mm of edges`,
+    'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,'Spine':cvFmtInt(spine)+' mm (rounded to mm)','Bleed':'Add 3mm to all edges',
+  });
+  cvState=(hasCore&&flapW>0)?{mode:'jacket',pH,pW,spine,coverW,flapW,TURN,docW,docH,boardVal}:null;
+}
+
+// ── PPC ───────────────────────────────────────────────────────────
+function cvCalcPPC(pH,pW,gsm,vol,pages,hasCore) {
+  const ppcType=document.getElementById('ppcType').value;
+  const bindAdder=parseFloat(document.getElementById('binding').value)||0;
+  const boardVal=parseFloat(document.getElementById('boardThickness').value)||0;
+  const ct=CONFIG.coverTypes.ppc;
+  const sub=ct.subtypes[ppcType]||ct.subtypes.round;
+  // Gutter from back style × board caliper; before a board is chosen, show the 2mm-board gutter
+  const gutter=sub.gutter[boardVal]??sub.gutter[4];
+  const wrap=parseFloat(document.getElementById('ppcWrap').value)||CONFIG.coverTypes.ppc.wrap;
+  const coverW=hasCore?pW-ct.boardInset:0;
+  const spine=cvCalcSpine(pages,gsm,vol,0.50,bindAdder+boardVal,true);
+  const trimW=hasCore?Math.round(coverW+gutter+spine+gutter+coverW):0;
+  const trimH=hasCore?Math.round(pH+6):0;
+  const docW=hasCore?wrap+coverW+gutter+spine+gutter+coverW+wrap:0;
+  const docH=hasCore?pH+wrap+wrap+6:0;
+  cvSetResult('r-ppc-spine', spine>0||hasCore?cvFmtInt(spine):null);
+  cvSetResult('r-ppc-trimW', hasCore?cvFmtInt(trimW):null);
+  cvSetResult('r-ppc-trimH', hasCore?cvFmtInt(trimH):null);
+  cvSetResult('r-ppc-docW',  hasCore?cvFmtInt(docW):null);
+  cvSetResult('r-ppc-docH',  hasCore?cvFmtInt(docH):null);
+  const spEl=document.getElementById('r-ppc-spine');
+  const bulk=cvCheckBulk('ppc',pages,gsm,vol,spEl);
+  if(boardVal===0&&hasCore) cvShowAlert('alert-board-req',true);
+  cvUpdateSpec(hasCore,{
+    'Type':sub.label,
+    'Doc Size':hasCore?`${cvFmtInt(docH)} × ${cvFmtInt(docW)} mm`:null,
+    'Trim Size':hasCore?`${cvFmtInt(trimH)} × ${cvFmtInt(trimW)} mm`:null,
+    'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,
+    'Spine':cvFmtInt(spine)+' mm (rounded to mm)',
+    'Board':boardVal>0?`${boardVal}mm (both boards combined)`:'Not selected',
+    'Board Panel':hasCore?`${cvFmtInt(trimH)} × ${cvFmt(coverW)} mm (trim −${ct.boardInset}mm)`:null,
+    'Gutter':gutter+'mm each side',
+    'Safe zone':`${ct.safeEdge}mm from case edge · ${ct.safeSpine}mm from spine edges · ${ct.safeGutter}mm from gutter`,
+    'Turn-in':`${wrap}mm all sides (top, bottom, front & back)`,
+  });
+  cvState=hasCore?{mode:'ppc',pH,pW,spine,coverW,gutter,trimW,trimH,docW,docH,WRAP:wrap,boardVal,ppcType}:null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PDF GENERATION
+// ═══════════════════════════════════════════════════════════════════
+
+function cvGeneratePDF() {
+  if(!cvState) return;
+  // Layouts live in pdfTemplates.js (Clays artwork-guide style)
+  const build={ limp:pdfBuildLimp, flaps:pdfBuildFlaps, jacket:pdfBuildJacket, ppc:pdfBuildCFC }[cvState.mode];
+  if(!build) return;
+  const {pW,pH,spine,docH}=cvState, ct=CONFIG.coverTypes[cvState.mode];
+  const cased=cvState.mode==='jacket'||cvState.mode==='ppc';
+  // Paperbacks: width × document height, spine to 1dp; cased: width × trim height, spine to whole mm
+  const name=cased
+    ? `${ct.slug}-template-${cvFmt(pW,0)}x${cvFmt(pH,0)}-sp${cvFmtInt(spine)}.pdf`
+    : `${ct.slug}-template-${cvFmt(pW,0)}x${cvFmt(docH,0)}-sp${cvFmt(spine)}.pdf`;
+  build(cvState).save(name);
+}
+
+// ── DOWNLOAD SPECS TEXT FILE ──────────────────────────────────────
+function cvDownloadSpecs() {
+  if (!cvState) return;
+
+  const pH = cvVal('pHeight');
+  const pW = cvVal('pWidth');
+  const gsm = cvVal('gsm');
+  const vol = cvVal('volume');
+  const pages = cvVal('numPages');
+  const now = new Date();
+
+  // Build specs text
+  let specs = `CLAYS COVERSPEC STUDIO — Production-Ready Cover Specifications\n`;
+  specs += `Generated: ${now.toLocaleString()}\n`;
+  specs += `\n${'='.repeat(60)}\n\n`;
+
+  specs += `COVER TYPE\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  specs += `TYPE: ${CONFIG.coverTypes[cvMode].label}\n\n`;
+
+  specs += `PAGE DIMENSIONS\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  specs += `Trim Height: ${pH} mm\n`;
+  specs += `Trim Width: ${pW} mm\n\n`;
+
+  specs += `PAPER SPECIFICATION\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  specs += `Grammage: ${gsm} gsm\n`;
+  specs += `Volume: ${vol}\n`;
+  specs += `Number of Pages: ${pages} pp\n\n`;
+
+  // Add mode-specific inputs
+  if (cvMode === 'flaps') {
+    const flapW = cvVal('flapWidth');
+    specs += `FLAP SPECIFICATION\n`;
+    specs += `${'-'.repeat(60)}\n`;
+    specs += `Flap Width: ${flapW} mm\n\n`;
+  } else if (cvMode === 'jacket') {
+    const flapW = cvVal('jacketFlapWidth');
+    const binding = document.getElementById('binding').value;
+    const boardSelect = document.getElementById('boardThickness');
+    const boardLabel = boardSelect.options[boardSelect.selectedIndex].text;
+    specs += `JACKET SPECIFICATION\n`;
+    specs += `${'-'.repeat(60)}\n`;
+    specs += `Flap Width: ${flapW} mm (including ${CONFIG.coverTypes.jacket.turnIn}mm turn-in)\n`;
+    specs += `Binding: ${binding === '0' ? 'Perfect Bound' : 'Sewn'}\n`;
+    specs += `Board Thickness: ${boardLabel}\n\n`;
+  } else if (cvMode === 'ppc') {
+    const binding = document.getElementById('binding').value;
+    const boardSelect = document.getElementById('boardThickness');
+    const boardLabel = boardSelect.options[boardSelect.selectedIndex].text;
+    const ppcType = document.getElementById('ppcType').value;
+    const wrap = cvVal('ppcWrap') || CONFIG.coverTypes.ppc.wrap;
+    specs += `CFC SPECIFICATION\n`;
+    specs += `${'-'.repeat(60)}\n`;
+    specs += `CFC Type: ${CONFIG.coverTypes.ppc.subtypes[ppcType]?.label || ppcType}\n`;
+    specs += `Gutter: ${cvState.gutter}mm each side\n`;
+    specs += `Board Panel: ${cvFmt(cvState.coverW)}mm wide (trim −${CONFIG.coverTypes.ppc.boardInset}mm)\n`;
+    specs += `Binding: ${binding === '0' ? 'Perfect Bound' : 'Sewn'}\n`;
+    specs += `Board Thickness: ${boardLabel}\n`;
+    specs += `Turn-in: ${wrap}mm (all sides — top, bottom, front & back)\n\n`;
+  }
+
+  specs += `CALCULATED RESULTS\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  specs += `Spine Width: ${cvState.spine} mm\n`;
+  specs += `Document Width: ${cvFmtInt(cvState.docW)} mm\n`;
+  specs += `Document Height: ${cvFmtInt(cvState.docH)} mm\n\n`;
+
+  specs += `PRODUCTION NOTES\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  specs += `${CONFIG.coverTypes[cvMode].bleedNote}\n`;
+  specs += `${CONFIG.coverTypes[cvMode].pdfNote}\n\n`;
+
+  specs += `ALERTS & WARNINGS\n`;
+  specs += `${'-'.repeat(60)}\n`;
+  const alerts = document.querySelectorAll('.alert-box.show');
+  if (alerts.length === 0) {
+    specs += `No alerts — specifications within acceptable ranges.\n`;
+  } else {
+    alerts.forEach(alert => {
+      specs += `⚠ ${alert.textContent.trim()}\n`;
+    });
+  }
+
+  // Download as TXT file
+  const filename = `specs-${CONFIG.coverTypes[cvMode].slug}-${pH}x${pW}-sp${cvFmtInt(cvState.spine)}.txt`;
+  const blob = new Blob([specs], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// ── RESET ─────────────────────────────────────────────────────────
+function cvReset() {
+  [...CORE_IDS,'flapWidth','jacketFlapWidth'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('binding').value='0';
+  document.getElementById('boardThickness').value='0';
+  document.getElementById('ppcType').value='round';
+  document.getElementById('ppcWrap').value=CONFIG.coverTypes.ppc.wrap;
+  cvState=null;
+  cvClearAlerts();
+  cvCalculate();
+}
+
+// ── PAPER STOCK PRESETS ────────────────────────────────────────────
+function cvPopulatePaperPresets() {
+  if (!CONFIG.features.enablePaperPresets) return;
+
+  const row = document.getElementById('paperPresetRow');
+  const select = document.getElementById('paperStockSelect');
+
+  select.innerHTML = '';
+  CONFIG.paperStocks.forEach(stock => {
+    const option = document.createElement('option');
+    // Volume from caliper: (microns / gsm) × 10, kept to 2dp so the spine stays accurate
+    const volume = stock.gsm > 0 ? Math.round(stock.microns / stock.gsm * 1000) / 100 : 0;
+    option.value = `${stock.gsm},${volume}`;
+    option.textContent = stock.label;
+    select.appendChild(option);
+  });
+
+  row.style.display = 'block';
+}
+
+function cvApplyPaperStock() {
+  const select = document.getElementById('paperStockSelect');
+  const [gsm, volume] = select.value.split(',');
+
+  if (gsm > 0) {
+    document.getElementById('gsm').value = gsm;
+    document.getElementById('volume').value = volume;
+    // Keep selection visible instead of resetting
+    cvCalculate();
+  }
+}
+
+// ── SAVE & LOAD SAVED CALCULATIONS ────────────────────────────────
+function cvSaveCalculation() {
+  if (!CONFIG.features.enableSaveHistory) return;
+
+  // Show modal
+  const modal = document.getElementById('saveModal');
+  const input = document.getElementById('saveCalcName');
+
+  // Pre-fill with default name
+  const defaultName = `${CONFIG.coverTypes[cvMode].label} • ${document.getElementById('pHeight').value}×${document.getElementById('pWidth').value}`;
+  input.value = defaultName;
+  input.focus();
+  input.select();
+
+  // Store default for use in confirm
+  cvSaveData = { defaultName };
+
+  // Show modal
+  modal.style.display = 'flex';
+
+  // Close modal on escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      cvCancelSave();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+}
+
+function cvConfirmSave() {
+  if (!CONFIG.features.enableSaveHistory) return;
+
+  const modal = document.getElementById('saveModal');
+  const input = document.getElementById('saveCalcName');
+  const name = input.value.trim() || cvSaveData.defaultName;
+
+  const entry = {
+    id: Date.now(),
+    name: name,
+    timestamp: Date.now(),
+    mode: cvMode,
+    inputs: {
+      pHeight: document.getElementById('pHeight').value,
+      pWidth: document.getElementById('pWidth').value,
+      gsm: document.getElementById('gsm').value,
+      volume: document.getElementById('volume').value,
+      numPages: document.getElementById('numPages').value,
+      flapWidth: document.getElementById('flapWidth').value || '',
+      jacketFlapWidth: document.getElementById('jacketFlapWidth').value || '',
+      binding: document.getElementById('binding').value || '0',
+      boardThickness: document.getElementById('boardThickness').value || '0',
+      ppcType: document.getElementById('ppcType').value || 'round'
+    }
+  };
+
+  let saved = JSON.parse(localStorage.getItem('coverspec_saved') || '[]');
+  saved.push(entry);
+  localStorage.setItem('coverspec_saved', JSON.stringify(saved));
+  cvUpdateSavedUI();
+
+  // Close modal
+  modal.style.display = 'none';
+}
+
+function cvCancelSave() {
+  const modal = document.getElementById('saveModal');
+  modal.style.display = 'none';
+}
+
+function cvLoadSaved(id) {
+  if (!id) return;
+
+  const saved = JSON.parse(localStorage.getItem('coverspec_saved') || '[]');
+  const entry = saved.find(e => e.id == id);
+
+  if (!entry) return;
+
+  // Restore mode
+  cvSetMode(entry.mode);
+
+  // Restore inputs
+  Object.entries(entry.inputs).forEach(([fieldId, value]) => {
+    const el = document.getElementById(fieldId);
+    if (el) el.value = value;
+  });
+
+  // Reset dropdown
+  document.getElementById('savedDropdown').value = '';
+
+  cvCalculate();
+}
+
+function cvUpdateSavedUI() {
+  if (!CONFIG.features.enableSaveHistory) return;
+
+  const saved = JSON.parse(localStorage.getItem('coverspec_saved') || '[]');
+  const section = document.getElementById('savedCalcsSection');
+  const dropdown = document.getElementById('savedDropdown');
+
+  if (saved.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  dropdown.innerHTML = '<option value="">Load a saved calculation...</option>';
+
+  // Sort by most recent first
+  saved.sort((a, b) => b.timestamp - a.timestamp);
+
+  saved.forEach(entry => {
+    const option = document.createElement('option');
+    option.value = entry.id;
+    option.textContent = entry.name;
+    dropdown.appendChild(option);
+  });
+}
+
+function cvDeleteSaved(id) {
+  if (!confirm('Delete this saved calculation?')) return;
+
+  let saved = JSON.parse(localStorage.getItem('coverspec_saved') || '[]');
+  saved = saved.filter(e => e.id != id);
+  localStorage.setItem('coverspec_saved', JSON.stringify(saved));
+  cvUpdateSavedUI();
+}
+
+function cvClearAllSaved() {
+  if (confirm('Delete all saved calculations?')) {
+    localStorage.removeItem('coverspec_saved');
+    cvUpdateSavedUI();
+  }
+}
+

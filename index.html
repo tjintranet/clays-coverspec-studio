@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ── SEO ──────────────────────────────────────────────────────────────── -->
+<title>Clays CoverSpec Studio — Production-Ready Cover Specs</title>
+<meta name="description" content="Production-ready cover specifications made in an instant. Calculate spine width and document dimensions for paperback, paperback with flaps, dust jacket and CFC covers, convert microns to paper volume, and generate print-ready ISBN barcode PDFs.">
+<meta name="keywords" content="book cover calculator, spine width calculator, dust jacket template, CFC template printed paper case template, paperback cover, ISBN barcode generator, paper volume, micron to volume, book production, cover specifications">
+<meta name="author" content="Clays CoverSpec Studio">
+<meta name="robots" content="index, follow">
+
+<!-- ── Open Graph (social sharing) ─────────────────────────────────────── -->
+<meta property="og:title" content="Clays CoverSpec Studio">
+<meta property="og:description" content="Production-ready cover specifications. Calculate dimensions, generate templates, create barcodes.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="logo.png">
+
+<!-- ── Favicons ─────────────────────────────────────────────────────────── -->
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+<!-- ── Fonts & libraries ─────────────────────────────────────────────────── -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   Design tokens
+   Brand chrome (header, tab bar, primary buttons, active states):
+     DESIGN.md Clays palette — navy #003057, blue #0e6ba8, cyan #06bee1
+   Content areas (cards, inputs, body text):
+     Cool light palette — white surfaces, #212529 / #4c525a text
+   font.family.primary = Open Sans
+   radius.xs = 4px  |  radius.sm = 10px
+   motion.duration.instant = 300ms
+═══════════════════════════════════════════════════════════════════ */
+/* :root tokens are written here at runtime by applyTheme() in config.js.
+   All brand values live in CONFIG.theme — do not add hardcoded values here. */
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── FOCUS VISIBLE (WCAG 2.2 AA keyboard requirement) ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── HEADER — white, carries the navy Clays logo ── */
+header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 4px 28px 0;
+  height: 60px;
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+/* ── APP TABS — brand navy chrome ── */
+.app-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--chrome-bord);
+  background: var(--chrome-surf);
+  padding: 0 28px;
+  flex-shrink: 0;
+}
+.app-tab {
+  padding: 13px 18px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--chrome-text-dim);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--dur), border-color var(--dur);
+  white-space: nowrap;
+}
+.app-tab:hover         { color: var(--chrome-text-mid); }
+.app-tab.active        { color: var(--chrome-text); border-bottom-color: var(--highlight); }
+.app-tab:focus-visible { outline-color: var(--highlight); }
+.app-tab:focus-visible { outline-offset: -2px; }
+
+/* ── TAB PANELS ── */
+.tab-panel { display:none; flex:1; }
+.tab-panel.active {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 36px 20px 48px;
+  background: var(--bg);
+}
+
+/* ── CARD — light surface ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  width: 100%;
+  max-width: 600px;
+  box-shadow: rgba(0,0,0,0.08) 0 0 10px 0;
+  overflow: hidden;
+}
+.card-body   { padding: 28px 28px 0; display:flex; flex-direction:column; }
+.card-footer {
+  padding: 20px 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  margin-top: 22px;
+}
+
+/* ── COVER TYPE SELECTOR ── */
+.type-selector {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 6px;
+  margin-bottom: 26px;
+}
+.type-btn {
+  padding: 9px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text-mid);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--dur);
+  line-height: 1.45;
+}
+.type-btn:hover       { border-color: var(--accent); color: var(--text); }
+.type-btn.active      { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.type-btn:focus-visible { outline-offset: 2px; }
+
+/* ── FORM SECTIONS ── */
+.section { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.section:last-child  { border-bottom: none; margin-bottom: 0; }
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.field-row        { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.field-row.single { grid-template-columns:1fr; }
+.field-group      { display:flex; flex-direction:column; gap:6px; }
+.field-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+.field-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.input-wrap { position: relative; }
+
+.input-wrap input[type="number"],
+.input-wrap input[type="text"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 44px 10px 12px;
+  outline: none;
+  transition: border-color var(--dur), background var(--dur);
+  -moz-appearance: textfield;
+}
+.input-wrap input::placeholder {
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+.input-wrap input[type="number"]::-webkit-inner-spin-button,
+.input-wrap input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+#bcFontScale {
+  padding-right: 12px !important;
+}
+#bcFontScale::-webkit-outer-spin-button,
+#bcFontScale::-webkit-inner-spin-button {
+  -webkit-appearance: auto !important;
+  display: auto !important;
+  margin-right: 8px !important;
+}
+.input-wrap input:focus          { border-color: var(--accent); background: #fff; }
+.input-wrap input:focus-visible  { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.input-unit {
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.input-wrap select {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 36px 10px 12px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color var(--dur);
+}
+.input-wrap select:focus          { border-color: var(--accent); background: #fff; }
+.input-wrap select:focus-visible  { outline: 2px solid var(--accent); outline-offset: 2px; }
+.select-arrow {
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+.cond { display:none; }
+.cond.visible { display:block; }
+
+/* ── RESULTS ── */
+.results-row { display:grid; gap:6px; }
+.results-row.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+.results-row.cols-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.results-row.cols-5 { grid-template-columns:1fr 1fr 1fr 1fr 1fr; }
+
+.result-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 10px 11px;
+}
+.result-card.primary {
+  background: var(--chrome-bg);
+  border-color: var(--accent);
+}
+.result-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.result-card.primary .result-lbl { color: var(--chrome-text-dim); }
+.result-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.result-card.primary .result-val { color: var(--highlight); }
+.result-sub {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+.result-card.primary .result-sub { color: var(--chrome-text-dim); }
+
+/* ── ALERTS ── */
+.alert-box {
+  background: var(--red-bg);
+  border: 1.5px solid var(--red-border);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  margin-top: 10px;
+  display: none;
+  line-height: 1.6;
+}
+.alert-box.show { display:block; }
+
+/* ── BUTTONS ── */
+.btn-download {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--dur), opacity var(--dur);
+}
+.btn-download:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-download:focus-visible        { outline: 2px solid var(--surface); outline-offset: 3px; }
+.btn-download:disabled             { opacity: 0.3; cursor: not-allowed; }
+
+.btn-row { display:flex; gap:10px; }
+.btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  color: var(--text-mid);
+  border: 1.5px solid var(--border-dark);
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--dur);
+}
+.btn-secondary:hover       { background: var(--bg); color: var(--text); border-color: var(--accent); }
+.btn-secondary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.note {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+/* ── PDF SPEC ── */
+.pdf-spec {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-mid);
+  line-height: 2;
+}
+.pdf-spec span  { color: var(--accent); font-weight: 600; }
+.pdf-spec.hidden { display:none; }
+
+/* ── MICRON CALCULATOR ── */
+.mv-result-val {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.mv-result-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+/* Micron result section sits on light card surface — accent value pops */
+
+/* ── BARCODE ── */
+.bc-canvas-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 12px;
+  display: inline-block;
+}
+canvas { display:block; }
+.bc-error {
+  background: var(--red-bg);
+  border: 1.5px solid var(--red-border);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--red);
+  margin-top: 10px;
+  display: none;
+  line-height: 1.6;
+}
+.bc-size-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* ── LINKS ── */
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; font-weight: 500; }
+a:hover { color: var(--accent-dark); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <!-- Logo: Clays logo-main.svg (navy #003057 on white header). Replace this file to re-brand. -->
+  <a href="#" onclick="showTab('intro');return false;" style="display:flex;align-items:center;flex-shrink:0;text-decoration:none;border-radius:var(--r-xs);padding:4px 6px">
+    <img src="logo-main.svg" alt="Clays CoverSpec Studio home" style="height:36px;width:auto;flex-shrink:0;display:block">
+  </a>
+</header>
+
+<!-- APP TABS -->
+<div class="app-tabs">
+  <button class="app-tab active" onclick="showTab('intro')">Introduction</button>
+  <button class="app-tab" onclick="showTab('sizes')">Standard Sizes</button>
+  <button class="app-tab" onclick="showTab('covers')">Cover Templates</button>
+  <button class="app-tab" onclick="showTab('micron')">Micron → Volume</button>
+  <button class="app-tab" onclick="showTab('barcode')">ISBN Barcode</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 0: INTRODUCTION
+══════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-intro">
+<div class="card" style="max-width:800px">
+<div class="card-body" style="padding-bottom:32px">
+  <div class="section" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+
+    <div style="margin-bottom:26px">
+      <div class="section-title">Welcome to Clays CoverSpec Studio</div>
+      <p style="font-size:15px;line-height:1.8;color:var(--text-mid)">
+        Production-ready cover specifications made in an instant. A set of practical tools to calculate spine width,
+        generate PDF or SVG templates, convert paper metrics, and create ISBN barcodes for book cover production.
+        Select a tab above to get started.
+      </p>
+    </div>
+
+    <!-- Cover Templates card -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:20px 22px;margin-bottom:14px">
+      <a href="#" onclick="showTab('covers');return false;" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-top:5px;margin-left:2px">
+            <!-- Back cover shadow -->
+            <rect x="2" y="3" width="6" height="18" rx="0.5" fill="rgba(255,255,255,0.45)"/>
+            <!-- Spine -->
+            <rect x="8" y="3" width="3" height="18" rx="0.5" fill="#fff"/>
+            <!-- Front cover -->
+            <rect x="11" y="3" width="14" height="18" rx="0.5" fill="#fff" opacity="0.9"/>
+            <!-- Cover highlights -->
+            <rect x="13" y="6" width="10" height="3" rx="0.3" fill="rgba(14,107,168,0.35)"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text)">Cover Templates</div>
+          <div style="font-family:var(--font);font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px">Paperback &nbsp;·&nbsp; Paperback with Flaps &nbsp;·&nbsp; Dust Jacket &nbsp;·&nbsp; CFC - Printed Paper Case</div>
+        </div>
+      </a>
+      <p style="font-size:14px;line-height:1.75;color:var(--text-mid);margin-bottom:10px">Calculates the exact dimensions for your cover artwork document — spine width, overall document width and height — based on the trim size, paper stock, and number of pages. Four binding types are supported:</p>
+      <ul style="font-size:14px;line-height:2;color:var(--text-mid);padding-left:20px;margin-bottom:10px">
+        <li><strong>Paperback</strong> — standard perfect-bound softcover.</li>
+        <li><strong>Paperback with Flaps</strong> — softcover with folding flaps front and back.</li>
+        <li><strong>Dust Jacket</strong> — printed jacket for a cased (hardback) book, with flaps and turn-ins.</li>
+        <li><strong>CFC - Printed Paper Case</strong> — printed cover wrapped directly onto hardback boards.</li>
+      </ul>
+      <p style="font-size:14px;line-height:1.75;color:var(--text-mid);margin-bottom:8px"><strong>How to use:</strong> Select your cover type, then enter the page trim height and width, paper grammage (weight in gsm), paper volume, and the total number of pages. Contact your Printer for details of paper stocks. For jackets and CFCs also select the board thickness. Results update automatically. Two download options are available: <em>Download PDF Template</em> saves a to-scale vector PDF for use as a guide layer. <em>Download SVG Template</em> exports a native vector file (fully editable in Illustrator, Affinity Designer, InDesign) with all guides, dimensions, and section fills pre-configured — open it directly and place artwork on top. The layouts are created at the finished size — don't forget to add a 3mm bleed allowance in your document setup.</p>
+      <p style="font-size:14px;line-height:1.75;color:var(--text-mid);margin-bottom:8px"><strong>Fit to Graphic scripts:</strong> free scripts that resize your artwork document to match a placed graphic, with optional bleed. Download the script and its README for your application:</p>
+      <ul style="font-size:14px;line-height:2;color:var(--text-mid);padding-left:20px;margin-bottom:10px">
+        <li><a href="downloads/FitToGraphic-InDesign-Script.zip" download style="color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:2px">InDesign script</a> — <code>FitDocumentToGraphic.jsx</code>, resizes the whole document to fit the imported template.</li>
+        <li><a href="downloads/FitToGraphic-Ilustrator-Script.zip" download style="color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:2px">Illustrator script</a> — <code>FitArtboardToGraphic.jsx</code>, resizes the active artboard to fit the imported template, with optional bleed and a trim guide.</li>
+        <li><a href="downloads/FitToGraphic-Affinity-Script.zip" download style="color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:2px">Affinity script</a> — <code>FitDocumentToGraphic_Affinity.js</code>, resizes the page to fit the imported template, with optional bleed.</li>
+      </ul>
+      <p style="font-size:13px;line-height:1.75;color:var(--text-mid);margin-bottom:10px"><strong>Disclaimer:</strong> These scripts are provided free of charge, as is, with no warranty of any kind. They change the size and layout of your document, so run them on a copy first and check the result (page size, bleed, trim guide and any non-printing settings) before sending files to print. Clays CoverSpec Studio accepts no responsibility for errors, lost work or printing problems arising from their use. Confirm final dimensions with your printer.</p>
+      <p style="font-size:13px;line-height:1.75;color:var(--text-mid)">If you create a lot of covers/jackets in InDesign we highly recommend this script: <a href="https://www.danrodney.com/scripts/makebookjacket.html" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:2px">danrodney.com/scripts/makebookjacket.html</a></p>
+    </div>
+
+    <!-- Micron to Volume card -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:20px 22px;margin-bottom:14px">
+      <a href="#" onclick="showTab('micron');return false;" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Micron symbol: μ -->
+            <text x="12" y="16" font-family="serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#fff">μ</text>
+          </svg>
+        </div>
+        <div>
+          <div style="font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text)">Micron → Volume</div>
+          <div style="font-family:var(--font);font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px">Convert paper thickness to bulk factor</div>
+        </div>
+      </a>
+      <p style="font-size:14px;line-height:1.75;color:var(--text-mid);margin-bottom:10px">Paper volume — sometimes called the bulk factor — describes how thick a sheet of paper feels relative to its weight. It is one of the inputs needed to calculate spine width. If your paper supplier has given you a thickness in microns (µ) rather than a volume figure, use this tool to convert it.</p>
+      <p style="font-size:13px;line-height:1.75;color:var(--text-mid)"><strong>How to use:</strong> Enter the paper thickness in microns and the grammage in gsm. The volume result appears immediately. Copy it into the Volume field in the Cover Templates tool.</p>
+    </div>
+
+    <!-- ISBN Barcode card -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:20px 22px">
+      <a href="#" onclick="showTab('barcode');return false;" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="14" viewBox="0 0 24 18" fill="#fff"><rect x="0" y="0" width="2" height="18"/><rect x="4" y="0" width="1" height="18"/><rect x="7" y="0" width="3" height="18"/><rect x="12" y="0" width="1" height="18"/><rect x="15" y="0" width="2" height="18"/><rect x="19" y="0" width="1" height="18"/><rect x="22" y="0" width="2" height="18"/></svg>
+        </div>
+        <div>
+          <div style="font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text)">ISBN Barcode</div>
+          <div style="font-family:var(--font);font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px">Generate a print-ready EAN-13 barcode PDF</div>
+        </div>
+      </a>
+      <p style="font-size:14px;line-height:1.75;color:var(--text-mid);margin-bottom:10px">Generates a print-quality EAN-13 ISBN barcode as a vector PDF sized to your exact requirements. The barcode is drawn as native vector shapes — not a bitmap image — so it will print cleanly at any size without pixelation. An optional EAN-5 five-digit add-on (price or edition number) can be added alongside the main barcode.</p>
+      <p style="font-size:13px;line-height:1.75;color:var(--text-mid)"><strong>How to use:</strong> Enter your ISBN-13 number (hyphens are stripped automatically). Optionally enter a 5-digit add-on (price supplement or edition number). Set your preferred width and height in millimetres. A preview updates as you type. Click <em>Download PDF Barcode</em> and place the PDF into your cover artwork.</p>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1: STANDARD SIZES
+══════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-sizes">
+<div class="card" style="max-width:800px">
+<div class="card-body">
+  <div class="section" style="border-bottom:none">
+    <div class="section-title">Standard Book Sizes</div>
+    <p style="font-size:14px;line-height:1.7;color:var(--text-mid);margin-bottom:20px">
+      Common trim sizes used in book production. All dimensions are listed as Height × Width in millimetres.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <thead>
+        <tr style="background:var(--chrome-bg);color:var(--chrome-text)">
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">Format</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">Height × Width (mm)</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">Use Case</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">A-Format</td>
+          <td style="padding:10px 12px;font-size:13px">178 × 111 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Mass-market fiction paperbacks</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">B-Format</td>
+          <td style="padding:10px 12px;font-size:13px">198 × 129 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Most common UK fiction &amp; non-fiction</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Demy (Paperback)</td>
+          <td style="padding:10px 12px;font-size:13px">216 × 135 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Premium trade paperbacks, literary fiction</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Demy (Case Bound)</td>
+          <td style="padding:10px 12px;font-size:13px">216 × 138 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Standard hardback fiction &amp; non-fiction</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">American Royal</td>
+          <td style="padding:10px 12px;font-size:13px">229 × 152 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">US Trade (6×9"), print-on-demand standard</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Royal (Paperback)</td>
+          <td style="padding:10px 12px;font-size:13px">234 × 153 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Premium paperbacks, biographies, travel</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Royal (Case Bound)</td>
+          <td style="padding:10px 12px;font-size:13px">234 × 156 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Commercial hardbacks &amp; heavy non-fiction</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Pinched Crown Quarto</td>
+          <td style="padding:10px 12px;font-size:13px">248 × 171 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Specialized non-fiction, textbooks</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">Crown Quarto</td>
+          <td style="padding:10px 12px;font-size:13px">246 × 189 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Children's books, art, photography, poetry</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">A5</td>
+          <td style="padding:10px 12px;font-size:13px">210 × 148 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Academic publishing, journals, manuals</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600">A4</td>
+          <td style="padding:10px 12px;font-size:13px">297 × 210 mm</td>
+          <td style="padding:10px 12px;font-size:13px;color:var(--text-dim)">Illustrated art books, atlases, children's</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--r-xs);padding:14px 16px;font-size:13px;color:var(--text-mid);line-height:1.6">
+      <strong style="color:var(--text)">Note:</strong> Based on UK and European standard book sizes. For case bound (hardback) books, outer boards typically extend 3–4mm beyond the page block. All dimensions are Height × Width in millimetres.
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2: COVER TEMPLATES
+══════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-covers">
+<div class="card">
+<div class="card-body">
+
+  <div class="section">
+    <div class="section-title">Cover Type</div>
+    <div class="type-selector">
+      <button class="type-btn active" onclick="cvSetMode('limp')"   id="btn-limp">Paperback</button>
+      <button class="type-btn"        onclick="cvSetMode('flaps')"  id="btn-flaps">Paperback with<br>Flaps</button>
+      <button class="type-btn"        onclick="cvSetMode('jacket')" id="btn-jacket">Dust<br>Jacket</button>
+      <button class="type-btn"        onclick="cvSetMode('ppc')"    id="btn-ppc">CFC - Printed Paper Case</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Page Dimensions</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Trim Height</label>
+        <div class="input-wrap"><input type="number" id="pHeight" placeholder="(required)" min="0"><span class="input-unit">mm</span></div>
+      </div>
+      <div class="field-group">
+        <label>Trim Width</label>
+        <div class="input-wrap"><input type="number" id="pWidth" placeholder="(required)" min="0"><span class="input-unit">mm</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Paper Specification</div>
+    <div class="field-row single" id="paperPresetRow" style="display:none;margin-bottom:12px">
+      <div class="field-group">
+        <label>Paper Stock Preset</label>
+        <div class="input-wrap">
+          <select id="paperStockSelect" onchange="cvApplyPaperStock()">
+            <option>Loading presets...</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+        <div class="field-hint">Select a preset (values auto-fill below), or leave blank and enter custom gsm/volume</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Grammage</label>
+        <div class="input-wrap"><input type="number" id="gsm" placeholder="(required)" min="0"><span class="input-unit">gsm</span></div>
+      </div>
+      <div class="field-group">
+        <label>Volume</label>
+        <div class="input-wrap"><input type="number" id="volume" placeholder="(required)" min="0" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Extent</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Number of Pages</label>
+        <div class="input-wrap"><input type="number" id="numPages" placeholder="(required)" min="0"><span class="input-unit">pp</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-flapWidth">
+    <div class="section-title">Flap</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Flap Width</label>
+        <div class="input-wrap"><input type="number" id="flapWidth" placeholder="(required)" min="0"><span class="input-unit">mm</span></div>
+        <div class="field-hint" id="flap-hint">Min 90mm — max = page width − 10mm</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-jacketFlap">
+    <div class="section-title">Flap</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Flap Width</label>
+        <div class="input-wrap"><input type="number" id="jacketFlapWidth" placeholder="(required)" min="0"><span class="input-unit">mm</span></div>
+        <div class="field-hint">Including the 10mm turn-in. Min 70mm — max 100mm</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-binding">
+    <div class="section-title">Binding Style</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Binding</label>
+        <div class="input-wrap">
+          <select id="binding"><option value="0">Perfect Bound/Unsewn</option><option value="2">Sewn</option></select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-boardThickness">
+    <div class="section-title">Board Thickness</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Board Size</label>
+        <div class="input-wrap">
+          <select id="boardThickness"><!-- populated by cvPopulateBoardSelect() --></select>
+          <span class="select-arrow">▾</span>
+        </div>
+        <div class="field-hint">Board thickness contributes to the spine width calculation.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-ppcType">
+    <div class="section-title">Board Style</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>CFC Type</label>
+        <div class="input-wrap">
+          <select id="ppcType" onchange="cvCalculate()">
+            <option value="round">Round Back (gutter 8mm / 9mm)</option>
+            <option value="flatback">Flat Back (gutter 10mm / 11mm)</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section cond" id="sec-ppcWrap">
+    <div class="section-title">Turn-in</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Turn-in Size</label>
+        <div class="input-wrap"><input type="number" id="ppcWrap" placeholder="18" value="18" min="0" oninput="cvCalculate()"><span class="input-unit">mm</span></div>
+        <div class="field-hint">Turn-in on all four sides (default 18mm)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Calculated Results</div>
+
+    <div id="results-limp">
+      <div class="results-row cols-3">
+        <div class="result-card"><div class="result-lbl">Spine</div><div class="result-val" id="r-limp-spine">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card primary"><div class="result-lbl">Doc Width</div><div class="result-val" id="r-limp-docW">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Doc Height</div><div class="result-val" id="r-limp-docH">—</div><div class="result-sub">mm</div></div>
+      </div>
+    </div>
+
+    <div id="results-flaps" style="display:none">
+      <div class="results-row cols-4">
+        <div class="result-card"><div class="result-lbl">Spine</div><div class="result-val" id="r-flaps-spine">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Cover Width</div><div class="result-val" id="r-flaps-coverW">—</div><div class="result-sub">mm (+1mm)</div></div>
+        <div class="result-card primary"><div class="result-lbl">Doc Width</div><div class="result-val" id="r-flaps-docW">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Doc Height</div><div class="result-val" id="r-flaps-docH">—</div><div class="result-sub">mm</div></div>
+      </div>
+    </div>
+
+    <div id="results-jacket" style="display:none">
+      <div class="results-row cols-4">
+        <div class="result-card"><div class="result-lbl">Spine</div><div class="result-val" id="r-jkt-spine">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Cover Width</div><div class="result-val" id="r-jkt-coverW">—</div><div class="result-sub">mm (+4mm)</div></div>
+        <div class="result-card primary"><div class="result-lbl">Doc Width</div><div class="result-val" id="r-jkt-docW">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Doc Height</div><div class="result-val" id="r-jkt-docH">—</div><div class="result-sub">mm (pH+6)</div></div>
+      </div>
+    </div>
+
+    <div id="results-ppc" style="display:none">
+      <div class="results-row cols-5">
+        <div class="result-card"><div class="result-lbl">Spine</div><div class="result-val" id="r-ppc-spine">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Trim Width</div><div class="result-val" id="r-ppc-trimW">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Trim Height</div><div class="result-val" id="r-ppc-trimH">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card primary"><div class="result-lbl">Doc Width</div><div class="result-val" id="r-ppc-docW">—</div><div class="result-sub">mm</div></div>
+        <div class="result-card"><div class="result-lbl">Doc Height</div><div class="result-val" id="r-ppc-docH">—</div><div class="result-sub">mm</div></div>
+      </div>
+    </div>
+
+    <div class="alert-box" id="alert-bulk-max" role="alert"></div>
+    <div class="alert-box" id="alert-bulk-min" role="alert"></div>
+    <div class="alert-box" id="alert-flap-min">⚠ Flap width is below the 90mm minimum.</div>
+    <div class="alert-box" id="alert-flap-max">⚠ Flap width exceeds maximum (page width − 10mm).</div>
+    <div class="alert-box" id="alert-jktflap-min">⚠ Flap width is below the 70mm minimum.</div>
+    <div class="alert-box" id="alert-jktflap-max">⚠ Flap width exceeds the 100mm maximum.</div>
+    <div class="alert-box" id="alert-board-req">⚠ Please select a board thickness to calculate the spine accurately.</div>
+    <div class="alert-box" id="alert-required-fields">⚠ Please complete all required fields.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">PDF Template Specification</div>
+    <div class="pdf-spec hidden" id="pdf-spec"></div>
+    <div class="pdf-spec" id="pdf-spec-empty" style="color:var(--text-dim)">Select cover type and enter values above.</div>
+  </div>
+
+  <div class="section" id="savedCalcsSection" style="display:none">
+    <div class="section-title">Saved Calculations</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>Load a Saved Calculation</label>
+        <div class="input-wrap">
+          <select id="savedDropdown" onchange="cvLoadSaved(this.value); this.value=''">
+            <option value="">No saved calculations</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="cvClearAllSaved()">Delete All Saved</button>
+  </div>
+
+</div><!-- /card-body -->
+<div class="card-footer">
+  <button class="btn-download" id="btn-download" disabled onclick="cvGeneratePDF()">Download PDF Template</button>
+  <div class="btn-row">
+    <button class="btn-secondary" id="btn-svg" disabled onclick="cvDownloadSVG()">Download SVG Template</button>
+    <button class="btn-secondary" id="btn-specs" disabled onclick="cvDownloadSpecs()">Download Specs (TXT)</button>
+    <button class="btn-secondary" id="btn-save-calc" disabled onclick="cvSaveCalculation()">Save Calculation</button>
+    <button class="btn-secondary" onclick="cvReset()">Reset</button>
+  </div>
+  <p class="note" id="footer-note">PDF page = trim size. Guides drawn as vector marks.</p>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2: MICRON TO VOLUME
+══════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-micron">
+<div class="card">
+<div class="card-body">
+
+  <div class="section">
+    <div class="section-title">Paper Measurement</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Thickness</label>
+        <div class="input-wrap">
+          <input type="number" id="mv-micron" placeholder="0" min="1" oninput="mvCalculate()">
+          <span class="input-unit">µ</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Grammage</label>
+        <div class="input-wrap">
+          <input type="number" id="mv-gsm" placeholder="0" min="1" oninput="mvCalculate()">
+          <span class="input-unit">gsm</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:12px;font-size:11px;color:var(--text-dim);line-height:1.6;font-weight:500">Formula: (Microns ÷ Grammage) × 10</p>
+  </div>
+
+  <div class="section" id="mv-result-wrap" style="display:none">
+    <div class="section-title">Paper Volume</div>
+    <div class="mv-result-label">Calculated Volume</div>
+    <div class="mv-result-val" id="mv-volume">—</div>
+    <p style="font-family:var(--font);font-size:10px;color:var(--text-dim);margin-top:6px">Volume (bulk factor)</p>
+  </div>
+
+</div>
+<div class="card-footer">
+  <button class="btn-download" id="mv-copy" disabled onclick="mvCopy()">Copy Result</button>
+  <div class="btn-row"><button class="btn-secondary" onclick="mvClear()">Clear</button></div>
+  <p class="note">Volume result is rounded to 1 decimal place.</p>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3: ISBN BARCODE
+══════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-barcode">
+<div class="card">
+<div class="card-body">
+
+  <div class="section">
+    <div class="section-title">ISBN-13</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>ISBN-13 Number</label>
+        <div class="input-wrap">
+          <input type="text" id="bcIsbn" placeholder="978-0-000-00000-0" oninput="bcUpdatePreview()"
+            style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-xs);color:var(--text);font-family:var(--font);font-size:16px;font-weight:600;padding:10px 12px;outline:none;transition:border-color 300ms">
+        </div>
+        <div class="field-hint">13 digits — hyphens ignored. Must begin 978 or 979.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Add-on Supplement (optional)</div>
+    <div class="field-row single">
+      <div class="field-group">
+        <label>EAN-5 Add-on</label>
+        <div class="input-wrap">
+          <input type="text" id="bcAddon" placeholder="00000" maxlength="5" oninput="bcUpdatePreview()"
+            style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-xs);color:var(--text);font-family:var(--font);font-size:16px;font-weight:600;padding:10px 12px;outline:none;transition:border-color 300ms">
+        </div>
+        <div class="field-hint">5 digits (price or edition number). Leave blank if not required.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Output Size</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Width</label>
+        <div class="input-wrap"><input type="number" id="bcWidth" value="38" min="20" max="100" oninput="bcUpdatePreview()"><span class="input-unit">mm</span></div>
+      </div>
+      <div class="field-group">
+        <label>Height</label>
+        <div class="input-wrap"><input type="number" id="bcHeight" value="27" min="5" max="80" oninput="bcUpdatePreview()"><span class="input-unit">mm</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Text Customization</div>
+
+    <div class="field-row single" style="margin-bottom:16px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="bcShowLabel" checked onchange="bcUpdatePreview()" style="width:16px;height:16px;cursor:pointer">
+          Show ISBN Label
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="bcShowDigits" checked onchange="bcUpdatePreview()" style="width:16px;height:16px;cursor:pointer">
+          Show Barcode Digits
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="bcShowAddonDigits" checked onchange="bcUpdatePreview()" style="width:16px;height:16px;cursor:pointer">
+          Show Add-on Digits
+        </label>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Font Size</label>
+        <div class="input-wrap"><input type="number" id="bcFontScale" value="100" min="50" max="150" step="5" oninput="bcUpdatePreview()" style="-webkit-appearance:auto;appearance:auto"><span class="input-unit">%</span></div>
+      </div>
+      <div class="field-group">
+        <label>ISBN Format</label>
+        <div class="input-wrap">
+          <select id="bcIsbnFormat" onchange="bcUpdatePreview()">
+            <option value="formatted">Formatted (ISBN XXX-X-XXX-XXXXX-X)</option>
+            <option value="raw">Raw (9780000000000)</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bc-error" id="bc-error"></div>
+
+  <div class="section" id="bc-preview-wrap" style="display:none">
+    <div class="section-title">Preview</div>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px;text-align:center">Screen preview at 96 DPI — text will appear larger in the PDF output</p>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+      <div class="bc-canvas-wrap"><canvas id="bc-canvas"></canvas></div>
+      <div class="bc-size-label" id="bc-size-label"></div>
+    </div>
+  </div>
+
+</div>
+<div class="card-footer">
+  <button class="btn-download" id="bc-download" disabled onclick="bcDownloadPDF()">Download PDF Barcode</button>
+  <div class="btn-row"><button class="btn-secondary" onclick="bcClear()">Clear</button></div>
+  <p class="note">Vector PDF — resolution independent. Sized exactly to specified dimensions.</p>
+</div>
+</div>
+</div>
+
+<script src="config.js"></script>
+<script src="pdfTemplates.js"></script>
+<script src="script.js"></script>
+<script src="svgGenerator.js"></script>
+<script>
+// ── Apply CONFIG.theme to :root as CSS custom properties ──────────
+// This runs once on load. To re-skin the application, update
+// CONFIG.theme in config.js — no other files need to change.
+(function applyTheme() {
+  const t = CONFIG.theme;
+  const root = document.documentElement.style;
+  root.setProperty('--bg',              t.bg);
+  root.setProperty('--surface',         t.surface);
+  root.setProperty('--border',          t.border);
+  root.setProperty('--border-dark',     t.borderDark);
+  root.setProperty('--text',            t.text);
+  root.setProperty('--text-mid',        t.textMid);
+  root.setProperty('--text-dim',        t.textDim);
+  root.setProperty('--accent',          t.accent);
+  root.setProperty('--accent-hover',    t.accentHover);
+  root.setProperty('--accent-dark',     t.accentDark);
+  root.setProperty('--on-accent',       t.onAccent);
+  root.setProperty('--highlight',       t.highlight);
+  root.setProperty('--header-bg',       t.headerBg);
+  root.setProperty('--chrome-bg',       t.chromeBg);
+  root.setProperty('--chrome-surf',     t.chromeSurf);
+  root.setProperty('--chrome-bord',     t.chromeBord);
+  root.setProperty('--chrome-text',     t.chromeText);
+  root.setProperty('--chrome-text-mid', t.chromeTextMid);
+  root.setProperty('--chrome-text-dim', t.chromeTextDim);
+  root.setProperty('--logo-fallback',   t.logoFallback);
+  root.setProperty('--red',             t.red);
+  root.setProperty('--red-bg',          t.redBg);
+  root.setProperty('--red-border',      t.redBorder);
+  root.setProperty('--font',            t.font);
+  root.setProperty('--dur',             t.dur);
+  root.setProperty('--r-xs',            t.rXs);
+  root.setProperty('--r-sm',            t.rSm);
+})();
+
+const TAB_ORDER = ['intro','sizes','covers','micron','barcode'];
+// Prevent up/down arrow keys from incrementing/decrementing number inputs
+document.addEventListener('keydown', function(e) {
+  if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.target.type === 'number') {
+    e.preventDefault();
+  }
+});
+
+function showTab(t) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('active', TAB_ORDER[i]===t));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+// Init cover calculator
+document.addEventListener('DOMContentLoaded', cvInit);
+</script>
+
+<!-- ── SAVE CALCULATION MODAL ── -->
+<div id="saveModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:28px;width:100%;max-width:400px;box-shadow:rgba(0,0,0,0.2) 0 4px 20px">
+    <h2 style="font-family:var(--font);font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center">Save Calculation</h2>
+
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:8px">Name (optional)</label>
+      <input type="text" id="saveCalcName" placeholder="e.g. Jacket A5" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-xs);font-family:var(--font);font-size:14px;box-sizing:border-box;color:var(--text);background:var(--bg);outline:none" />
+      <div style="font-size:11px;color:var(--text-dim);margin-top:6px">Leave blank for auto-generated name</div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="cvCancelSave()" style="flex:1;padding:10px;background:transparent;border:1.5px solid var(--border-dark);border-radius:var(--r-xs);color:var(--text-mid);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all 300ms">Cancel</button>
+      <button onclick="cvConfirmSave()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:var(--r-xs);color:var(--on-accent);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all 300ms">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER & DISCLAIMER ── -->
+<footer style="background:var(--bg);border-top:1px solid var(--border);padding:28px 20px;margin-top:auto;text-align:center">
+  <div style="max-width:800px;margin:0 auto;font-size:12px;color:var(--text-dim);line-height:1.6">
+    <p style="margin:0"><strong>Disclaimer:</strong> Clays CoverSpec Studio provides calculated cover specifications as a reference tool. All calculations should be verified with your printer before production. Dimensions are provided in good faith but are not guaranteed to be error-free. Always confirm your book size, spine measurements, and production settings directly with your printing partner.</p>
+  </div>
+</footer>
+
+</body>
+</html>
