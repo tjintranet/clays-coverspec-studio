@@ -73,6 +73,35 @@ header {
   gap: 16px;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  text-decoration: none;
+  border-radius: var(--r-xs);
+  padding: 4px 6px;
+}
+.brand-logo { height: 36px; width: auto; flex-shrink: 0; display: block; }
+.brand-title {
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--accent-dark);   /* navy — matches the logo */
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.brand:hover .brand-title { color: var(--accent); }
+@media (max-width: 600px) {
+  header { padding-left: 16px; padding-right: 16px; }
+  .brand { gap: 10px; }
+  .brand-logo { height: 28px; }
+  .brand-title { font-size: 12px; padding-left: 10px; letter-spacing: 0.08em; }
+}
+
 /* ── APP TABS — brand navy chrome ── */
 .app-tabs {
   display: flex;
@@ -429,8 +458,9 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 
 <header>
   <!-- Logo: Clays logo-main.svg (navy #003057 on white header). Replace this file to re-brand. -->
-  <a href="#" onclick="showTab('intro');return false;" style="display:flex;align-items:center;flex-shrink:0;text-decoration:none;border-radius:var(--r-xs);padding:4px 6px">
-    <img src="logo-main.svg" alt="Clays CoverSpec Studio home" style="height:36px;width:auto;flex-shrink:0;display:block">
+  <a href="#" class="brand" onclick="showTab('intro');return false;" aria-label="Clays CoverSpec Studio home">
+    <img src="logo-main.svg" alt="" class="brand-logo">
+    <span class="brand-title">CoverSpec Studio</span>
   </a>
 </header>
 
