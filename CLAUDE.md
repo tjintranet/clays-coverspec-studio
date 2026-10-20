@@ -150,8 +150,9 @@ CONFIG = {
     limp:   { spineBaseline, spineRoundMm, maxSpineMm, hinge, bleedNote, ... },
     flaps:  { spineBaseline, maxSpineMm, maxDocWMm, flapMin, hinge, ... },
     jacket: { spineBaseline, spineRoundMm, maxSpineMm, boardOverhang, turnIn, flapMin, flapMax, heightAdd, ... },
-    ppc:    { spineBaseline, spineRoundMm, minBulkMm, maxBulkMm, wrap, boardInset, safeEdge, safeSpine, safeGutter, subtypes: { round, flatback } },
+    ppc:    { spineBaseline, spineRoundMm, minBulk, maxBulkMm, wrap, boardInset, safeEdge, safeSpine, safeGutter, subtypes: { round, flatback } },
   },
+  printMethods: { conventional, digital },        // cased printing method (indexes minBulk)
   boardThicknesses: [ { label, value }, ... ],  // populated into <select> at runtime
   bindingAdders: { '0': 0, '2': 2 },            // Perfect Bound / Sewn
   alerts: { spine60, spine50, flapMin, flapMax, jktFlapMin, jktFlapMax, boardReq },
@@ -252,7 +253,7 @@ coverW = pW + 3          (front/back = trim + 3mm, e.g. 153 → 156; CONFIG jack
 TURN   = 10              (fixed turn-in, mm)
 docW   = flapW + coverW + spine + coverW + flapW   (flapW as entered INCLUDES the 10mm turn-in)
 docH   = pH + 6          (+6mm top/bottom board overhang)
-bulk: 8–60mm (cased)
+bulk: max 60mm; min by printing × back style (see Alerts)
 flap min: 70mm, flap max: 100mm
 fold at flapW from each edge; turn-in limit at flapW − TURN
 safe zone: no type/border within 3mm of edges
@@ -363,7 +364,8 @@ Widths/heights use `fmt(n, 0)` (integer). Spine uses `fmt(n)` (1dp) for limp/fla
 | `jacketFlapWidth` | Flap Width | mm | jacket | Includes the 10mm turn-in. Min 70mm, max 100mm |
 | `binding` | Binding Style | — | jacket, ppc | Select: Perfect Bound (0) / Sewn (+2mm) |
 | `boardThickness` | Board Size | mm | jacket, ppc | Populated from `CONFIG.boardThicknesses` |
-| `ppcType` | CFC Type | — | ppc | Select: round / flatback (gutter from board caliper) |
+| `ppcType` | Back Style | — | jacket, ppc | Select: round / flatback — sets cased min bulk; CFC gutter from board caliper |
+| `printMethod` | Printing Method | — | jacket, ppc | Populated from `CONFIG.printMethods` (conventional / digital) — sets cased min bulk |
 | `ppcWrap` | Wraparound Size | mm | ppc | Board overhang on all four sides (default 18mm from config, resets on tab switch) |
 | `paperPreset` | Paper Stock | — | all | Optional: select common papers to auto-fill gsm/volume |
 
@@ -389,7 +391,7 @@ All show `—` until pWidth and pHeight are both > 0.
 | ID | Trigger |
 |---|---|
 | `alert-bulk-max` | Text-block bulk > 60mm (all types) |
-| `alert-bulk-min` | Text-block bulk < 4mm (paperback, flaps) or < 8mm (jacket, ppc — cased) |
+| `alert-bulk-min` | Text-block bulk < 4mm (paperback, flaps); cased (jacket, ppc): conventional Flat Back 4mm / Round Back 8mm, digital 10mm |
 | `alert-flap-min` | flapW < 90mm (flaps) |
 | `alert-flap-max` | flapW > pW−10mm (flaps) |
 | `alert-jktflap-min` | flapW < 70mm (jacket) |
@@ -397,7 +399,7 @@ All show `—` until pWidth and pHeight are both > 0.
 | `alert-board-req` | boardThickness = 0 with hasCore (jacket, ppc) |
 | `alert-required-fields` | Mode-specific required field is missing (flaps: flap width; jacket: flap width) — only shows after user enters trim dimensions |
 
-**Bulk** = text-block thickness `(pages × gsm × vol) / 20000` (1dp) — no cover, board or binding allowance. Clays' limits apply to bulk, not spine: max 60mm; min 4mm paperback, 8mm cased. Limits live in `CONFIG.coverTypes[mode].minBulkMm/maxBulkMm`; alert text in `CONFIG.alerts.bulkMin/bulkMax` with `{bulk}`/`{min}`/`{max}`/`{type}` placeholders, written into the alert divs at runtime. The spine value turns red when either alert shows, and a Bulk line appears in the spec box. All alert messages are customizable in `config.js.alerts`.
+**Bulk** = text-block thickness `(pages × gsm × vol) / 20000` (1dp) — no cover, board or binding allowance. Clays' limits apply to bulk, not spine: max 60mm; min 4mm paperback. Cased minimum depends on printing method and back style — Conventional: Flat Back 4mm, Round Back 8mm; Digital: both 10mm. Limits live in `CONFIG.coverTypes[mode].minBulkMm/maxBulkMm` (cased: `minBulk[printMethod][backStyle]`); alert text in `CONFIG.alerts.bulkMin/bulkMax` with `{bulk}`/`{min}`/`{max}`/`{type}` placeholders, written into the alert divs at runtime. The spine value turns red when either alert shows, and a Bulk line appears in the spec box. All alert messages are customizable in `config.js.alerts`.
 
 ---
 

@@ -162,7 +162,8 @@ const CONFIG = {
       slug:        'jacket',
       spineBaseline:  0.50,        // baseline mm added to spine calculation
       spineRoundMm:   true,        // round to nearest whole mm (stricter precision than paperback)
-      minBulkMm:      8,           // cased minimum text-block bulk (mm)
+      minBulk:        { conventional: { flatback: 4, round: 8 }, digital: { flatback: 10, round: 10 } },
+                                   // cased minimum text-block bulk (mm) by printing method × back style
       maxBulkMm:      60,          // maximum text-block bulk (mm)
       boardOverhang:  3,           // front/back panel = trim width + this (e.g. 153 + 3 = 156)
       safeZone:       3,           // no type/border within this many mm of the edges
@@ -179,7 +180,8 @@ const CONFIG = {
       slug:        'cfc',
       spineBaseline:  0.50,        // baseline mm added to spine calculation
       spineRoundMm:   true,        // round to nearest whole mm
-      minBulkMm:      8,           // cased minimum text-block bulk (mm)
+      minBulk:        { conventional: { flatback: 4, round: 8 }, digital: { flatback: 10, round: 10 } },
+                                   // cased minimum text-block bulk (mm) by printing method × back style
       maxBulkMm:      60,          // maximum text-block bulk (mm)
       wrap:           18,          // default turn-in (mm), all four sides (docH = pH + 18 + 18 + 6)
       boardInset:     4,           // front/back board = trim width − this (e.g. 153 − 4 = 149)
@@ -201,6 +203,13 @@ const CONFIG = {
     },
   },
 
+  // ── Printing methods (cased: jacket & CFC) ────────────────────
+  // Keys index coverTypes.jacket/ppc.minBulk. Order = dropdown order.
+  printMethods: {
+    conventional: 'Conventional',
+    digital:      'Digital',
+  },
+
   // ── Board thickness options (PPC & Jacket) ────────────────────
   // value = total board contribution to spine (both boards combined, mm)
   boardThicknesses: [
@@ -220,7 +229,8 @@ const CONFIG = {
   // Modify messages here to match your brand voice and contact procedures.
   // Alert triggers are defined in coverTypes above:
   //   - bulkMin/bulkMax: triggered when text-block bulk (pages × gsm × vol / 20000)
-  //     is outside minBulkMm/maxBulkMm. {min}/{max}/{bulk}/{type} are filled in.
+  //     is outside minBulkMm/maxBulkMm (cased: minBulk[printMethod][backStyle]).
+  //     {min}/{max}/{bulk}/{type} are filled in.
   //   - flapMin/flapMax: triggered by flap width bounds (paperback with flaps)
   //   - jktFlapMin/jktFlapMax: triggered by jacket flap bounds (jacket only)
   //   - boardReq: triggered when board thickness not selected (jacket/PPC)

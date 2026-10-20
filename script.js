@@ -460,12 +460,18 @@ function cvPopulateBoardSelect() {
   });
 }
 
+function cvPopulatePrintMethods() {
+  const sel=document.getElementById('printMethod');
+  sel.innerHTML=Object.entries(CONFIG.printMethods).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
+}
+
 function cvInit() {
   cvPopulateBoardSelect();
+  cvPopulatePrintMethods();
   cvPopulatePaperPresets();
   cvUpdateSavedUI();
   CORE_IDS.forEach(id=>document.getElementById(id).addEventListener('input',cvCalculate));
-  ['flapWidth','jacketFlapWidth','binding','boardThickness','ppcType'].forEach(id=>
+  ['flapWidth','jacketFlapWidth','binding','boardThickness','ppcType','printMethod'].forEach(id=>
     document.getElementById(id).addEventListener('input',cvCalculate));
   cvCalculate();
 }
@@ -480,7 +486,9 @@ function cvSetMode(m) {
   show('sec-jacketFlap',     m==='jacket');
   show('sec-binding',        m==='jacket'||m==='ppc');
   show('sec-boardThickness', m==='jacket'||m==='ppc');
-  show('sec-ppcType',        m==='ppc');
+  show('sec-ppcType',        m==='jacket'||m==='ppc');
+  show('sec-printMethod',    m==='jacket'||m==='ppc');
+  document.getElementById('ppcGutterHint').style.display=m==='ppc'?'':'none';
   show('sec-ppcWrap',        m==='ppc');
   if(m==='ppc') document.getElementById('ppcWrap').value=CONFIG.coverTypes.ppc.wrap;
   ['limp','flaps','jacket','ppc'].forEach(k=>{
@@ -498,12 +506,20 @@ function cvSetMode(m) {
 
 function cvShowAlert(id,show) { document.getElementById(id).classList.toggle('show',show); }
 
-// Flags bulk outside CONFIG.coverTypes[mode].minBulkMm / maxBulkMm and reds the spine value
+// Cased minimum bulk depends on printing method × back style (CONFIG.coverTypes[mode].minBulk)
+function cvCasedOpts() {
+  const method=document.getElementById('printMethod').value||'conventional';
+  const back=document.getElementById('ppcType').value||'round';
+  return {method,back,methodLabel:CONFIG.printMethods[method],backLabel:CONFIG.coverTypes.ppc.subtypes[back].label};
+}
+
+// Flags bulk outside the mode's min / maxBulkMm and reds the spine value
 function cvCheckBulk(mode,pages,gsm,vol,spEl) {
   const ct=CONFIG.coverTypes[mode], bulk=cvCalcBulk(pages,gsm,vol);
-  const kind=(mode==='jacket'||mode==='ppc')?'cased':'paperback';
-  const fill=t=>t.replace('{bulk}',cvFmt(bulk)).replace('{min}',ct.minBulkMm).replace('{max}',ct.maxBulkMm).replace('{type}',kind);
-  const over=bulk>ct.maxBulkMm, under=bulk>0&&bulk<ct.minBulkMm;
+  let min=ct.minBulkMm, kind='paperback';
+  if(ct.minBulk) { const o=cvCasedOpts(); min=ct.minBulk[o.method][o.back]; kind=`${o.methodLabel.toLowerCase()} ${o.backLabel} cased`; }
+  const fill=t=>t.replace('{bulk}',cvFmt(bulk)).replace('{min}',min).replace('{max}',ct.maxBulkMm).replace('{type}',kind);
+  const over=bulk>ct.maxBulkMm, under=bulk>0&&bulk<min;
   if(over)  { document.getElementById('alert-bulk-max').textContent=fill(CONFIG.alerts.bulkMax); cvShowAlert('alert-bulk-max',true); }
   if(under) { document.getElementById('alert-bulk-min').textContent=fill(CONFIG.alerts.bulkMin); cvShowAlert('alert-bulk-min',true); }
   spEl.style.color=(over||under)?'var(--red)':'';
@@ -618,6 +634,8 @@ function cvCalcJacket(pH,pW,gsm,vol,pages,hasCore) {
     'Cover Panel':hasCore?`${cvFmtInt(docH)} × ${cvFmt(coverW)} mm (trim +${CONFIG.coverTypes.jacket.boardOverhang}mm)`:null,
     'Flap Width': flapW>0?`${cvFmt(flapW)} mm each (incl. ${TURN}mm turn-in)`:null,
     'Board':boardVal>0?`${boardVal}mm (both boards combined)`:'Not selected',
+    'Back Style':cvCasedOpts().backLabel,
+    'Printing':cvCasedOpts().methodLabel,
     'Turn-in':`${TURN}mm of colour turn-in within each flap`,
     'Safe zone':`No type/border within ${CONFIG.coverTypes.jacket.safeZone}mm of edges`,
     'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,'Spine':cvFmtInt(spine)+' mm (rounded to mm)','Bleed':'Add 3mm to all edges',
@@ -651,6 +669,7 @@ function cvCalcPPC(pH,pW,gsm,vol,pages,hasCore) {
   if(boardVal===0&&hasCore) cvShowAlert('alert-board-req',true);
   cvUpdateSpec(hasCore,{
     'Type':sub.label,
+    'Printing':cvCasedOpts().methodLabel,
     'Doc Size':hasCore?`${cvFmtInt(docH)} × ${cvFmtInt(docW)} mm`:null,
     'Trim Size':hasCore?`${cvFmtInt(trimH)} × ${cvFmtInt(trimW)} mm`:null,
     'Bulk': bulk>0?cvFmt(bulk)+' mm (text block)':null,
@@ -727,6 +746,8 @@ function cvDownloadSpecs() {
     specs += `JACKET SPECIFICATION\n`;
     specs += `${'-'.repeat(60)}\n`;
     specs += `Flap Width: ${flapW} mm (including ${CONFIG.coverTypes.jacket.turnIn}mm turn-in)\n`;
+    specs += `Back Style: ${cvCasedOpts().backLabel}\n`;
+    specs += `Printing: ${cvCasedOpts().methodLabel}\n`;
     specs += `Binding: ${binding === '0' ? 'Perfect Bound' : 'Sewn'}\n`;
     specs += `Board Thickness: ${boardLabel}\n\n`;
   } else if (cvMode === 'ppc') {
@@ -737,7 +758,8 @@ function cvDownloadSpecs() {
     const wrap = cvVal('ppcWrap') || CONFIG.coverTypes.ppc.wrap;
     specs += `CFC SPECIFICATION\n`;
     specs += `${'-'.repeat(60)}\n`;
-    specs += `CFC Type: ${CONFIG.coverTypes.ppc.subtypes[ppcType]?.label || ppcType}\n`;
+    specs += `Back Style: ${CONFIG.coverTypes.ppc.subtypes[ppcType]?.label || ppcType}\n`;
+    specs += `Printing: ${cvCasedOpts().methodLabel}\n`;
     specs += `Gutter: ${cvState.gutter}mm each side\n`;
     specs += `Board Panel: ${cvFmt(cvState.coverW)}mm wide (trim −${CONFIG.coverTypes.ppc.boardInset}mm)\n`;
     specs += `Binding: ${binding === '0' ? 'Perfect Bound' : 'Sewn'}\n`;
@@ -786,6 +808,7 @@ function cvReset() {
   document.getElementById('binding').value='0';
   document.getElementById('boardThickness').value='0';
   document.getElementById('ppcType').value='round';
+  document.getElementById('printMethod').value='conventional';
   document.getElementById('ppcWrap').value=CONFIG.coverTypes.ppc.wrap;
   cvState=null;
   cvClearAlerts();
@@ -876,7 +899,8 @@ function cvConfirmSave() {
       jacketFlapWidth: document.getElementById('jacketFlapWidth').value || '',
       binding: document.getElementById('binding').value || '0',
       boardThickness: document.getElementById('boardThickness').value || '0',
-      ppcType: document.getElementById('ppcType').value || 'round'
+      ppcType: document.getElementById('ppcType').value || 'round',
+      printMethod: document.getElementById('printMethod').value || 'conventional'
     }
   };
 
