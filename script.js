@@ -711,7 +711,10 @@ function cvGeneratePDF() {
   const name=cased
     ? `${ct.slug}-template-${cvFmt(pW,0)}x${cvFmt(pH,0)}-sp${cvFmtInt(spine)}.pdf`
     : `${ct.slug}-template-${cvFmt(pW,0)}x${cvFmt(docH,0)}-sp${cvFmt(spine)}.pdf`;
-  build(cvState).save(name);
+  // Alerts still showing are printed on the template so they can't be lost
+  // (one box can hold several ⚠ messages — split them; ⚠ isn't in the PDF's Helvetica)
+  const warnings=[...document.querySelectorAll('.alert-box.show')].flatMap(e=>e.textContent.split('⚠').map(t=>t.trim()).filter(Boolean));
+  build({...cvState,warnings}).save(name);
 }
 
 // ── DOWNLOAD SPECS TEXT FILE ──────────────────────────────────────

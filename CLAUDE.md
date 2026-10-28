@@ -338,6 +338,7 @@ Modelled on Clays' reference guides `jacket-wrapper.pdf`, `printed-cover-for-cas
   - *Flaps:* as paperback plus score lines, flap safe rects, flap width arrows, cover panel (trim + 1mm) arrow.
   - *Jacket:* dotted lines at turn-in limit, fold (trim + 3mm) and trim width each side; flap arrows "including 10mm of colour turn-in"; rotated 10mm turn-in notes; jacket height arrow on back flap; three front-panel arrows (trim width / trim + 3 centring / trim + 13 extent); 3mm safe rect inset from the page edge.
   - *CFC:* slate board outlines; 4mm safe rects ("Non-bleed designs must be 4mm away from trim"); 18mm turn-in arrows on all four edges; joint arrows plus rotated joint-allowance note for the selected back style; board width/height arrows and notes; spine-lettering 2mm note with pointer; Round Back only: centring arrow across the front safe zone.
+- **Ignored warnings:** any on-screen alerts still showing at download are printed in a red-bordered box (`CONFIG.pdf.warn/warnBg/warnTitle`) at the top of the back panel, headed "OUTSIDE CLAYS SPECIFICATION — check with your Printer before using this template". `cvGeneratePDF()` collects them from `.alert-box.show` (splitting multi-message boxes, dropping ⚠ which Helvetica lacks) and passes them as `state.warnings`; `pdfKit.warnings()` draws the box. No warnings → no box.
 - **Style constants** live in `CONFIG.pdf` (colours, line weights, dot spacing, arrowheads, font sizes, title tracking).
 - **No crop marks / slug.** The Clays references include a slug with crop marks, but the page must stay = document size because the Fit to Graphic scripts size the user's document to the placed PDF.
 
@@ -600,7 +601,7 @@ function cvFmtInt(n) { return String(Math.round(n)); }
 
 - **No bleed on the PDF page.** Page = trim size only. Bleed instruction is a text note. Adding a bleed-padded page with dashed guides was tried and rejected as confusing to non-technical users.
 - **Dimension arrows and rotated notes are back** (Oct 2026) — Clays' preferred layout uses them; this supersedes the earlier client decision that removed them. Rotated text verified in MuPDF rendering; check Acrobat/Preview when changing layouts.
-- **No white background boxes behind text.** Text sits directly on the panels.
+- **No white background boxes behind text.** Text sits directly on the panels. The red warnings box is the one deliberate exception.
 - **Spine rounded before docW.** `Math.round(raw × 10) / 10` applied immediately to prevent displayed spine and docW disagreeing due to float precision.
 - **Board thickness required for jacket and PPC.** Alert fires if user enters dimensions without selecting a board size. Without a board value the spine is materially wrong.
 - **Height × Width convention.** All dimensions printed `H × W mm` to match industry standard for book formats.

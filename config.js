@@ -297,5 +297,9 @@ const CONFIG = {
     specSize:   7,                // pt — job spec lines
     titleSize:  34,               // pt — BACK / FRONT / SPINE (max; shrinks to fit)
     titleTrack: 0.12,             // letter spacing, as a fraction of title size
+    // Warnings box — on-screen alerts still showing at download are printed on the back panel
+    warn:       [192, 57, 43],    // #c0392b — warning text and border
+    warnBg:     [253, 240, 238],  // #fdf0ee — warning box fill
+    warnTitle:  'OUTSIDE CLAYS SPECIFICATION — check with your Printer before using this template',
   },
 };

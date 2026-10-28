@@ -121,7 +121,25 @@ function pdfKit(doc) {
     lines.forEach((l, i) => { yy += note(l, x, yy, maxW, 'left', i === 0 ? P.noteSize : P.specSize) + 0.6; });
   }
 
-  return { line, dotted, dashed, rect, box, arrow, note, vnote, title, titleFor, safeRect, spec, width, capH };
+  // Red warnings box (alerts ignored on screen). y = top of box. Drawn last so it sits over titles.
+  function warnings(list, x, y, w) {
+    if (!list || !list.length) return;
+    const pad = 2.5, tw = w - 2 * pad, lh = sz => sz * PT * 1.3;
+    setFont(P.specSize + 1, true, P.warn);
+    const head = doc.splitTextToSize(P.warnTitle, tw);
+    setFont(P.specSize, false, P.warn);
+    const items = list.map(t => doc.splitTextToSize(`•  ${t}`, tw));
+    const h = 2 * pad + head.length * lh(P.specSize + 1) + 1 + items.reduce((n, l) => n + l.length * lh(P.specSize) + 0.8, 0);
+    box(x, y, w, h, P.warnBg); rect(x, y, w, h, P.warn, 0.5);
+    let yy = y + pad;
+    setFont(P.specSize + 1, true, P.warn);
+    head.forEach(l => { doc.text(l, x + pad, yy + capH(P.specSize + 1)); yy += lh(P.specSize + 1); });
+    yy += 1;
+    setFont(P.specSize, false, P.warn);
+    items.forEach(ls => { ls.forEach(l => { doc.text(l, x + pad, yy + capH(P.specSize)); yy += lh(P.specSize); }); yy += 0.8; });
+  }
+
+  return { line, dotted, dashed, rect, box, arrow, note, vnote, title, titleFor, safeRect, spec, warnings, width, capH };
 }
 
 // mm value without a trailing .0 (129.0 → 129, 20.3 → 20.3)
@@ -160,6 +178,7 @@ function pdfBuildLimp(s) {
   k.spec([pdfTitleLine('limp'),
     `Document ${mm(docH)} × ${mm(docW)}mm  ·  Spine ${mm(spine)}mm  ·  Page ${mm(docH)} × ${mm(pW)}mm`,
     ct.bleedNote], SZ + 4, docH - SZ - 16, pW - 2 * SZ - HG - 8);
+  k.warnings(s.warnings, SZ + 4, SZ + 8, pW - 2 * SZ - HG - 8);
   return doc;
 }
 
@@ -201,6 +220,7 @@ function pdfBuildFlaps(s) {
   k.spec([pdfTitleLine('flaps'),
     `Document ${mm(docH)} × ${mm(docW)}mm  ·  Spine ${mm(spine)}mm  ·  Flaps ${mm(flapW)}mm`,
     ct.bleedNote], x1 + SZ + 4, docH - SZ - 16, coverW - 2 * SZ - HG - 8);
+  k.warnings(s.warnings, x1 + SZ + 4, SZ + 8, coverW - 2 * SZ - HG - 8);
   return doc;
 }
 
@@ -256,6 +276,7 @@ function pdfBuildJacket(s) {
   k.spec([pdfTitleLine('jacket'),
     `Document ${cvFmtInt(docH)} × ${cvFmtInt(docW)}mm  ·  Spine ${cvFmtInt(spine)}mm  ·  Boards ${boardVal / 2}mm`,
     ct.bleedNote], x2 + SZ + 4, docH - SZ - 18, coverW - 2 * SZ - 8);
+  k.warnings(s.warnings, x2 + SZ + 4, SZ + 8, coverW - 2 * SZ - 8);
   return doc;
 }
 
@@ -325,5 +346,6 @@ function pdfBuildCFC(s) {
   k.spec([pdfTitleLine('ppc'),
     `Document ${cvFmtInt(docH)} × ${cvFmtInt(docW)}mm  ·  Case ${cvFmtInt(trimH)} × ${cvFmtInt(trimW)}mm  ·  Spine ${cvFmtInt(spine)}mm  ·  Joint ${gutter}mm  ·  Boards ${boardVal / 2}mm  ·  ${ct.bleedNote}`],
     x1, bot + 3, x2 - x1 + gutter);
+  k.warnings(s.warnings, x1 + SE + 4, top + SE + 8, coverW - 2 * SE - 8);
   return doc;
 }
