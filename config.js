@@ -45,25 +45,49 @@ const CONFIG = {
   // Tip: To add a custom paper, manually enter gsm/volume below the
   // dropdown without selecting a preset.
   paperStocks: [
+    // Clays House Paper Text Range 2026 (CLAYS_HOUSE_PAPER_RANGE_2026.pdf).
     // microns = caliper from the paper supplier. Not shown in the dropdown —
     // volume is derived as (microns / gsm) × 10 when the list is built.
-    { label: '— Select a paper stock (or enter custom) —', gsm: 0, microns: 0 },
-    { label: 'FSC Holmen Book Cream 52gsm',       gsm: 52, microns: 80  },
-    { label: 'FSC Holmen Book Cream 55gsm',       gsm: 55, microns: 106 },
-    { label: 'FSC Holmen Book Cream 65gsm',       gsm: 65, microns: 138 },
-    { label: 'FSC Holmen Book Cream 80gsm',       gsm: 80, microns: 155 },
-    { label: 'FSC Holmen Book 52gsm',             gsm: 52, microns: 80  },
-    { label: 'FSC Holmen Book 55gsm',             gsm: 55, microns: 106 },
-    { label: 'FSC Bulky News 49gsm',              gsm: 49, microns: 112 },
-    { label: 'FSC Bulky News 52gsm',              gsm: 52, microns: 114 },
-    { label: 'FSC Ensolux Cream 70gsm',           gsm: 70, microns: 110 },
-    { label: 'FSC College Text 80gsm',            gsm: 80, microns: 138 },
-    { label: 'FSC Arctic Matt 90gsm',             gsm: 90, microns: 83  },
-    { label: 'FSC White Woodfree Offset 80gsm',   gsm: 80, microns: 98  },
-    { label: 'FSC Munken Premium White 80gsm',    gsm: 80, microns: 140 },
-    { label: 'FSC Munken Premium Cream 80gsm',    gsm: 80, microns: 140 },
-    { label: 'FSC Munken Pure 80gsm',             gsm: 80, microns: 104 },
+    // method  = printMethods key; the dropdown groups stocks by it and
+    //           choosing a stock sets Printing Method to match.
+    // sizes   = stocked reel sizes as Clays word them (shown in the hint).
+    // formats = paperFormats keys the trim must match, or null for all formats.
+    // note    = optional supplier note shown under the dropdown.
+    { label: 'FSC Krubook 49gsm',                  gsm: 49, microns: 112, method: 'conventional', type: 'Bulky Book',               sizes: 'B Format',        formats: ['B'] },
+    { label: 'FSC Holmen Bulky 52gsm',             gsm: 52, microns: 114, method: 'conventional', type: 'Bulky Book',               sizes: 'A Format',        formats: ['A'],
+      note: 'Low-usage paper — please give advance notice of large print runs.' },
+    { label: 'FSC Holmen Book 52gsm',              gsm: 52, microns: 81,  method: 'conventional', type: 'Improved Mechanical',      sizes: 'B Format',        formats: ['B'] },
+    { label: 'FSC Holmen Book Cream 52gsm',        gsm: 52, microns: 81,  method: 'conventional', type: 'Improved Mechanical',      sizes: 'B Format',        formats: ['B'] },
+    { label: 'FSC Holmen Book 55gsm',              gsm: 55, microns: 106, method: 'conventional', type: 'Improved Mechanical',      sizes: 'B Format',        formats: ['B'] },
+    { label: 'FSC Holmen Book Cream 55gsm',        gsm: 55, microns: 107, method: 'conventional', type: 'Improved Mechanical',      sizes: 'B Format',        formats: ['B'] },
+    { label: 'FSC Holmen Book Cream 65gsm',        gsm: 65, microns: 138, method: 'conventional', type: 'Improved Mechanical',      sizes: 'B, Royal & Demy', formats: ['B','Royal','Demy'] },
+    { label: 'FSC College Text (Ensoclassic) 80gsm', gsm: 80, microns: 138, method: 'conventional', type: 'Improved Mechanical',    sizes: 'B, Royal & Demy', formats: ['B','Royal','Demy'],
+      note: 'Held in limited quantities with less frequent makings — please give advance notice of large print runs.' },
+    { label: 'FSC Amber Graphic 80gsm',            gsm: 80, microns: 98,  method: 'conventional', type: 'Uncoated Woodfree Offset', sizes: 'B, Royal & Demy', formats: ['B','Royal','Demy'] },
+
+    { label: 'FSC Holmen Bulky 52gsm',             gsm: 52, microns: 114, method: 'digital',      type: 'Bulky Book',               sizes: 'A & B Format',    formats: ['A','B'] },
+    { label: 'FSC Holmen Book 52gsm',              gsm: 52, microns: 81,  method: 'digital',      type: 'Improved Mechanical',      sizes: 'A & B Format',    formats: ['A','B'] },
+    { label: 'FSC Holmen Book Cream 52gsm',        gsm: 52, microns: 81,  method: 'digital',      type: 'Improved Mechanical',      sizes: 'A & B Format',    formats: ['A','B'] },
+    { label: 'FSC Holmen Book 55gsm',              gsm: 55, microns: 106, method: 'digital',      type: 'Improved Mechanical',      sizes: 'A & B Format',    formats: ['A','B'] },
+    { label: 'FSC Holmen Book Cream 55gsm',        gsm: 55, microns: 107, method: 'digital',      type: 'Improved Mechanical',      sizes: 'A & B Format',    formats: ['A','B'] },
+    { label: 'FSC Holmen Book Cream 65gsm',        gsm: 65, microns: 138, method: 'digital',      type: 'Improved Mechanical',      sizes: 'All Formats',     formats: null },
+    { label: 'FSC Ensolux Cream 70gsm',            gsm: 70, microns: 110, method: 'digital',      type: 'Improved Mechanical',      sizes: 'Demy & Royal',    formats: ['Demy','Royal'],
+      note: 'Large formats are printed on FSC Hylte Pocket Cream 60gsm, an equivalent grade matching the bulk — ask when placing the order.' },
+    { label: 'FSC Arctic Matt 90gsm',              gsm: 90, microns: 83,  method: 'digital',      type: 'Coated Woodfree Offset',   sizes: 'Demy & Royal',    formats: ['Demy','Royal'],
+      note: 'Large formats are printed on an equivalent coated 90gsm woodfree paper — ask when placing the order.' },
+    { label: 'FSC Amber Hiway Super 80gsm',        gsm: 80, microns: 98,  method: 'digital',      type: 'Uncoated Woodfree Offset', sizes: 'All Formats',     formats: null,
+      note: 'Large formats are printed on FSC Navigator 80gsm, also an uncoated woodfree offset grade — ask when placing the order.' },
   ],
+
+  // Trim formats the stocked reel sizes refer to (H × W mm). Width is a range
+  // so paperback and cased variants both match (Demy 135/138, Royal 153/156).
+  paperFormats: {
+    A:     { h: 178, w: [110, 111] },
+    B:     { h: 198, w: [129, 129] },
+    Demy:  { h: 216, w: [135, 138] },
+    Royal: { h: 234, w: [153, 156] },
+  },
+  paperFormatToleranceMm: 2,
 
   // ── Theme tokens ───────────────────────────────────────────────
   // All colour, typography, radius, and motion values used by the UI.
@@ -148,9 +172,10 @@ const CONFIG = {
       slug:        'flaps',
       spineBaseline:  0.65,        // baseline mm added to spine calculation
       spineRoundMm:   false,       // round to 1 decimal place
-      minBulkMm:      4,           // paperback minimum text-block bulk (mm)
-      maxBulkMm:      60,          // maximum text-block bulk (mm)
-      flapMin:        90,          // alert if user enters flap width < this value (mm)
+      minBulkMm:      5,           // flap cover minimum text-block bulk (mm)
+      maxBulkMm:      50,          // flap cover maximum text-block bulk (mm)
+      flapMin:        60,          // alert if user enters flap width < this value (mm)
+      flapSpineClear: 20,          // folded flap must stop this far from the spine: max flap = trim width − this
       hinge:          3,           // mm inboard from spine edge for hinge guide
       safeZone:       3,           // no type/border within this many mm of the edges
       bleedNote:      'Add 3mm bleed allowance to the document',
@@ -170,6 +195,7 @@ const CONFIG = {
       turnIn:         10,          // fixed turn-in depth (mm) on both front and back flaps
       flapMin:        70,          // alert if user enters flap width < this value (mm)
       flapMax:        100,         // alert if user enters flap width > this value (mm)
+      inlineMinSpineMm: 10,        // spine (incl. boards) below this can't be jacketed in-line — hand jacketing
       heightAdd:      6,           // mm added to document height for board overhang (docH = pH + 6)
       bleedNote:      'Add 3mm bleed allowance to the document',
       pdfNote:        'PDF page = trim size incl. flaps & turn-ins. Fold guides included.',
@@ -217,6 +243,7 @@ const CONFIG = {
     { label: '2mm boards',        value: 4   },
     { label: '3mm boards',        value: 6 }
   ],
+  defaultBoard: 4,   // boardThicknesses value selected on load and reset (2mm boards)
 
   // ── Binding adders ─────────────────────────────────────────────
   bindingAdders: {
@@ -231,18 +258,26 @@ const CONFIG = {
   //   - bulkMin/bulkMax: triggered when text-block bulk (pages × gsm × vol / 20000)
   //     is outside minBulkMm/maxBulkMm (cased: minBulk[printMethod][backStyle]).
   //     {min}/{max}/{bulk}/{type} are filled in.
-  //   - flapMin/flapMax: triggered by flap width bounds (paperback with flaps)
+  //     bulkFlatBack replaces bulkMin when switching a Round Back to Flat Back would clear it.
+  //   - flapMin/flapMax: triggered by flap width bounds (paperback with flaps); {min}/{max} filled in
+  //   - handJacket: jacket spine (incl. boards) below jacket.inlineMinSpineMm; {spine}/{min} filled in
   //   - jktFlapMin/jktFlapMax: triggered by jacket flap bounds (jacket only)
   //   - boardReq: triggered when board thickness not selected (jacket/PPC)
+  //   - paperFormat: chosen paper stock isn't stocked for the trim size (paperFormats)
+  //   - paperMethod: cased Printing Method differs from the chosen stock's method
   alerts: {
     bulkMax:    '⚠ Book bulk is {bulk}mm — the maximum is {max}mm. Contact your Printer or consider a lower grammage or lower volume paper.',
     bulkMin:    '⚠ Book bulk is {bulk}mm — the minimum for {type} books is {min}mm. Contact your Printer or consider a higher volume paper or more pages.',
-    flapMin:    '⚠ Flap width is below the minimum.',
-    flapMax:    '⚠ Flap width exceeds maximum (page width − 10mm).',
+    bulkFlatBack: '⚠ Text bulk is {bulk}mm — books under {min}mm must have a Flat Back board hollow. Set Back Style to Flat Back.',
+    flapMin:    '⚠ Flap width is below the {min}mm minimum.',
+    flapMax:    '⚠ Flap width exceeds the {max}mm maximum — a folded flap must stop {clear}mm short of the spine.',
+    handJacket: '⚠ Spine is {spine}mm including boards — under {min}mm the jacket can\'t be applied in-line and will need hand jacketing.',
     jktFlapMin: '⚠ Flap width is below the 70mm minimum.',
     jktFlapMax: '⚠ Flap width exceeds the 100mm maximum.',
     boardReq:   '⚠ Please select a board thickness.',
     requiredFields: '⚠ Please complete all required fields.',
+    paperFormat: '⚠ {stock} is stocked for {sizes} only — a {trim} mm trim may need a different paper. Contact your Printer.',
+    paperMethod: '⚠ {stock} is a {stockMethod} stock but Printing Method is set to {method}.',
   },
 
   // ── PDF drawing constants ──────────────────────────────────────

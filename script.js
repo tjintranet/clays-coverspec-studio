@@ -458,6 +458,7 @@ function cvPopulateBoardSelect() {
     opt.textContent = b.label;
     sel.appendChild(opt);
   });
+  sel.value = CONFIG.defaultBoard;
 }
 
 function cvPopulatePrintMethods() {
@@ -516,19 +517,21 @@ function cvCasedOpts() {
 // Flags bulk outside the mode's min / maxBulkMm and reds the spine value
 function cvCheckBulk(mode,pages,gsm,vol,spEl) {
   const ct=CONFIG.coverTypes[mode], bulk=cvCalcBulk(pages,gsm,vol);
-  let min=ct.minBulkMm, kind='paperback';
+  let min=ct.minBulkMm, kind=mode==='flaps'?'flap-cover paperback':'paperback';
   if(ct.minBulk) { const o=cvCasedOpts(); min=ct.minBulk[o.method][o.back]; kind=`${o.methodLabel.toLowerCase()} ${o.backLabel} cased`; }
   const fill=t=>t.replace('{bulk}',cvFmt(bulk)).replace('{min}',min).replace('{max}',ct.maxBulkMm).replace('{type}',kind);
   const over=bulk>ct.maxBulkMm, under=bulk>0&&bulk<min;
   if(over)  { document.getElementById('alert-bulk-max').textContent=fill(CONFIG.alerts.bulkMax); cvShowAlert('alert-bulk-max',true); }
-  if(under) { document.getElementById('alert-bulk-min').textContent=fill(CONFIG.alerts.bulkMin); cvShowAlert('alert-bulk-min',true); }
+  // Round Back below its minimum but enough for Flat Back: tell them to switch
+  const flatBackFix=under&&ct.minBulk&&cvCasedOpts().back==='round'&&bulk>=ct.minBulk[cvCasedOpts().method].flatback;
+  if(under) { document.getElementById('alert-bulk-min').textContent=fill(CONFIG.alerts[flatBackFix?'bulkFlatBack':'bulkMin']); cvShowAlert('alert-bulk-min',true); }
   spEl.style.color=(over||under)?'var(--red)':'';
   return bulk;
 }
 
 function cvClearAlerts() {
   ['alert-bulk-max','alert-bulk-min',
-   'alert-flap-min','alert-flap-max','alert-jktflap-min','alert-jktflap-max','alert-board-req','alert-required-fields']
+   'alert-flap-min','alert-flap-max','alert-jktflap-min','alert-jktflap-max','alert-board-req','alert-required-fields','alert-paper','alert-hand-jacket']
   .forEach(id=>cvShowAlert(id,false));
 }
 
@@ -558,6 +561,7 @@ function cvCalculate() {
 
     if(requiredFieldsMissing) cvShowAlert('alert-required-fields',true);
   }
+  if(hasCore&&CONFIG.features.enablePaperPresets) cvCheckPaper(pH,pW);
 
   if      (cvMode==='limp')   cvCalcLimp(pH,pW,gsm,vol,pages,hasCore);
   else if (cvMode==='flaps')  cvCalcFlaps(pH,pW,gsm,vol,pages,hasCore);
@@ -598,9 +602,13 @@ function cvCalcFlaps(pH,pW,gsm,vol,pages,hasCore) {
   cvSetResult('r-flaps-docH',   hasCore?cvFmt(docH):null);
   const spEl=document.getElementById('r-flaps-spine');
   const bulk=cvCheckBulk('flaps',pages,gsm,vol,spEl);
-  if(flapW>0&&flapW<90) cvShowAlert('alert-flap-min',true);
-  if(flapW>0&&pW>0&&flapW>pW-10) cvShowAlert('alert-flap-max',true);
-  document.getElementById('flap-hint').textContent=pW>0?`Min 90mm — max ${pW-10}mm`:'Min 90mm — max = page width − 10mm';
+  const ct=CONFIG.coverTypes.flaps, flapMax=pW-ct.flapSpineClear;
+  const fillFlap=t=>t.replace('{min}',ct.flapMin).replace('{max}',cvFmt(flapMax,0)).replace('{clear}',ct.flapSpineClear);
+  if(flapW>0&&flapW<ct.flapMin) { document.getElementById('alert-flap-min').textContent=fillFlap(CONFIG.alerts.flapMin); cvShowAlert('alert-flap-min',true); }
+  if(flapW>0&&pW>0&&flapW>flapMax) { document.getElementById('alert-flap-max').textContent=fillFlap(CONFIG.alerts.flapMax); cvShowAlert('alert-flap-max',true); }
+  document.getElementById('flap-hint').textContent=pW>0
+    ?`Min ${ct.flapMin}mm — max ${cvFmt(flapMax,0)}mm (flap stops ${ct.flapSpineClear}mm short of the spine)`
+    :`Min ${ct.flapMin}mm — max = trim width − ${ct.flapSpineClear}mm (flap stops ${ct.flapSpineClear}mm short of the spine)`;
   cvUpdateSpec(hasCore&&flapW>0,{
     'Doc Size':   hasCore?`${cvFmt(docH)} × ${cvFmt(docW)} mm`:null,
     'Cover Panel':hasCore?`${cvFmt(docH)} × ${cvFmt(coverW)} mm (+1mm tolerance)`:null,
@@ -627,8 +635,13 @@ function cvCalcJacket(pH,pW,gsm,vol,pages,hasCore) {
   const spEl=document.getElementById('r-jkt-spine');
   const bulk=cvCheckBulk('jacket',pages,gsm,vol,spEl);
   if(boardVal===0&&hasCore) cvShowAlert('alert-board-req',true);
-  if(flapW>0&&flapW<CONFIG.coverTypes.jacket.flapMin) cvShowAlert('alert-jktflap-min',true);
-  if(flapW>0&&flapW>CONFIG.coverTypes.jacket.flapMax) cvShowAlert('alert-jktflap-max',true);
+  if(flapW>0&&flapW<CONFIG.coverTypes.jacket.flapMin) { document.getElementById('alert-jktflap-min').textContent=CONFIG.alerts.jktFlapMin; cvShowAlert('alert-jktflap-min',true); }
+  if(flapW>0&&flapW>CONFIG.coverTypes.jacket.flapMax) { document.getElementById('alert-jktflap-max').textContent=CONFIG.alerts.jktFlapMax; cvShowAlert('alert-jktflap-max',true); }
+  const inlineMin=CONFIG.coverTypes.jacket.inlineMinSpineMm;
+  if(spine>0&&boardVal>0&&spine<inlineMin) {
+    document.getElementById('alert-hand-jacket').textContent=CONFIG.alerts.handJacket.replace('{spine}',cvFmtInt(spine)).replace('{min}',inlineMin);
+    cvShowAlert('alert-hand-jacket',true);
+  }
   cvUpdateSpec(hasCore&&flapW>0,{
     'Doc Size':   hasCore?`${cvFmtInt(docH)} × ${cvFmtInt(docW)} mm`:null,
     'Cover Panel':hasCore?`${cvFmtInt(docH)} × ${cvFmt(coverW)} mm (trim +${CONFIG.coverTypes.jacket.boardOverhang}mm)`:null,
@@ -806,10 +819,12 @@ function cvDownloadSpecs() {
 function cvReset() {
   [...CORE_IDS,'flapWidth','jacketFlapWidth'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('binding').value='0';
-  document.getElementById('boardThickness').value='0';
+  document.getElementById('boardThickness').value=CONFIG.defaultBoard;
   document.getElementById('ppcType').value='round';
   document.getElementById('printMethod').value='conventional';
   document.getElementById('ppcWrap').value=CONFIG.coverTypes.ppc.wrap;
+  document.getElementById('paperStockSelect').value='';
+  cvUpdatePaperHint(null);
   cvState=null;
   cvClearAlerts();
   cvCalculate();
@@ -822,29 +837,71 @@ function cvPopulatePaperPresets() {
   const row = document.getElementById('paperPresetRow');
   const select = document.getElementById('paperStockSelect');
 
-  select.innerHTML = '';
-  CONFIG.paperStocks.forEach(stock => {
-    const option = document.createElement('option');
-    // Volume from caliper: (microns / gsm) × 10, kept to 2dp so the spine stays accurate
-    const volume = stock.gsm > 0 ? Math.round(stock.microns / stock.gsm * 1000) / 100 : 0;
-    option.value = `${stock.gsm},${volume}`;
-    option.textContent = stock.label;
-    select.appendChild(option);
+  select.innerHTML = '<option value="">— Select a house paper (or enter custom) —</option>';
+  // One group per printing method; option value = index into CONFIG.paperStocks
+  Object.entries(CONFIG.printMethods).forEach(([method, label]) => {
+    const group = document.createElement('optgroup');
+    group.label = label;
+    CONFIG.paperStocks.forEach((stock, i) => {
+      if (stock.method !== method) return;
+      const option = document.createElement('option');
+      option.value = i;
+      option.textContent = stock.label;
+      group.appendChild(option);
+    });
+    select.appendChild(group);
   });
 
   row.style.display = 'block';
 }
 
-function cvApplyPaperStock() {
-  const select = document.getElementById('paperStockSelect');
-  const [gsm, volume] = select.value.split(',');
+// Volume from caliper: (microns / gsm) × 10, kept to 2dp so the spine stays accurate
+function cvStockVolume(stock) { return Math.round(stock.microns / stock.gsm * 1000) / 100; }
 
-  if (gsm > 0) {
-    document.getElementById('gsm').value = gsm;
-    document.getElementById('volume').value = volume;
-    // Keep selection visible instead of resetting
+// The chosen stock, or null — the selection is cleared once gsm/volume are edited away from it
+function cvSelectedStock() {
+  const select = document.getElementById('paperStockSelect');
+  const stock = CONFIG.paperStocks[select.value];
+  if (!select.value || !stock) return null;
+  if (cvVal('gsm') !== stock.gsm || cvVal('volume') !== cvStockVolume(stock)) {
+    select.value = '';
+    cvUpdatePaperHint(null);
+    return null;
+  }
+  return stock;
+}
+
+function cvUpdatePaperHint(stock) {
+  const hint = document.getElementById('paperStockHint');
+  hint.textContent = stock
+    ? `${CONFIG.printMethods[stock.method]} · ${stock.type} · stocked for ${stock.sizes}${stock.note ? '. ' + stock.note : ''}`
+    : 'Clays house papers — select one to fill in gsm and volume, or enter your own below';
+}
+
+function cvApplyPaperStock() {
+  const stock = CONFIG.paperStocks[document.getElementById('paperStockSelect').value];
+  cvUpdatePaperHint(stock || null);
+  if (stock) {
+    document.getElementById('gsm').value = stock.gsm;
+    document.getElementById('volume').value = cvStockVolume(stock);
+    document.getElementById('printMethod').value = stock.method;
     cvCalculate();
   }
+}
+
+// Flags a stock that isn't held for this trim size, or (cased) a printing method mismatch
+function cvCheckPaper(pH, pW) {
+  const stock = cvSelectedStock();
+  if (!stock) return;
+  const msgs = [], tol = CONFIG.paperFormatToleranceMm;
+  const fits = f => Math.abs(pH - f.h) <= tol && pW >= f.w[0] - tol && pW <= f.w[1] + tol;
+  if (stock.formats && !stock.formats.some(k => fits(CONFIG.paperFormats[k])))
+    msgs.push(CONFIG.alerts.paperFormat.replace('{stock}', stock.label).replace('{sizes}', stock.sizes).replace('{trim}', `${cvFmt(pH,0)} × ${cvFmt(pW,0)}`));
+  const method = document.getElementById('printMethod').value;
+  if (CONFIG.coverTypes[cvMode].minBulk && method !== stock.method)
+    msgs.push(CONFIG.alerts.paperMethod.replace('{stock}', stock.label)
+      .replace('{stockMethod}', CONFIG.printMethods[stock.method].toLowerCase()).replace('{method}', CONFIG.printMethods[method]));
+  if (msgs.length) { document.getElementById('alert-paper').textContent = msgs.join(' '); cvShowAlert('alert-paper', true); }
 }
 
 // ── SAVE & LOAD SAVED CALCULATIONS ────────────────────────────────

@@ -146,33 +146,35 @@ All cover-type rules, board options, alert messages, and PDF draw constants live
 ```js
 CONFIG = {
   brand: { name, tagline },
+  features: { enablePaperPresets, enableSaveHistory },
+  paperStocks: [ { label, gsm, microns, method, type, sizes, formats, note? }, ... ],
+  paperFormats: { A, B, Demy, Royal },           // { h, w: [min, max] } — stocked reel sizes
+  paperFormatToleranceMm: 2,
+  theme: { ... },                                 // CSS custom properties (see Design system)
   coverTypes: {
-    limp:   { spineBaseline, spineRoundMm, maxSpineMm, hinge, bleedNote, ... },
-    flaps:  { spineBaseline, maxSpineMm, maxDocWMm, flapMin, hinge, ... },
-    jacket: { spineBaseline, spineRoundMm, maxSpineMm, boardOverhang, turnIn, flapMin, flapMax, heightAdd, ... },
-    ppc:    { spineBaseline, spineRoundMm, minBulk, maxBulkMm, wrap, boardInset, safeEdge, safeSpine, safeGutter, subtypes: { round, flatback } },
+    limp:   { label, slug, spineBaseline, spineRoundMm, minBulkMm, maxBulkMm, hinge, safeZone, bleedNote, ... },
+    flaps:  { label, slug, spineBaseline, spineRoundMm, minBulkMm, maxBulkMm, flapMin, flapSpineClear, hinge, safeZone, ... },
+    jacket: { label, slug, spineBaseline, spineRoundMm, minBulk, maxBulkMm, boardOverhang, safeZone, turnIn, flapMin, flapMax, inlineMinSpineMm, heightAdd, ... },
+    ppc:    { label, slug, spineBaseline, spineRoundMm, minBulk, maxBulkMm, wrap, boardInset, safeEdge, safeSpine, safeGutter, subtypes: { round, flatback } },
   },
-  printMethods: { conventional, digital },        // cased printing method (indexes minBulk)
+  printMethods: { conventional, digital },        // cased printing method (indexes minBulk, groups paper stocks)
   boardThicknesses: [ { label, value }, ... ],  // populated into <select> at runtime
+  defaultBoard: 4,                               // 2mm boards selected on load / reset
   bindingAdders: { '0': 0, '2': 2 },            // Perfect Bound / Sewn
-  alerts: { spine60, spine50, flapMin, flapMax, jktFlapMin, jktFlapMax, boardReq },
-  pdf: { fills, noteY, infoY, lineH },
+  alerts: { bulkMax, bulkMin, bulkFlatBack, flapMin, flapMax, handJacket, jktFlapMin, jktFlapMax, boardReq, requiredFields, paperFormat, paperMethod },
+  pdf: { ink, slate, white, flapTint, lineW, dotW, dotGap, arrowW, headL, ... },
 }
 ```
 
 ### Board thickness options
 
-Values represent the combined contribution of both boards to spine width (mm):
+Values represent the combined contribution of both boards to spine width (mm). The value also keys the CFC gutter (`ppc.subtypes[type].gutter`).
 
-| Label | Value |
-|---|---|
-| Choose board size | 0 |
-| 1.5mm boards | 3 |
-| 1.9mm boards | 3.8 |
-| 2mm boards | 4 |
-| 2.25mm boards | 4.5 |
-| 2.5mm boards | 5 |
-| 2.75mm boards | 5.5 |
+| Label | Value | Notes |
+|---|---|---|
+| Choose board size | 0 | Triggers `alert-board-req` |
+| 2mm boards | 4 | Default (`CONFIG.defaultBoard`) — 2000mic |
+| 3mm boards | 6 | 3000mic |
 
 ---
 
@@ -194,7 +196,7 @@ If pages, gsm, or volume is zero, spine = 0 (no baseline applied).
 
 ### Limp with Flaps (8pp)
 
-Same formula as limp. Bulk limits 4–60mm, as paperback.
+Same formula as limp. Bulk limits 5–50mm (`flaps.minBulkMm/maxBulkMm`).
 
 ### Dust Jacket
 
@@ -206,7 +208,7 @@ spine = roundMm((pages × gsm × vol) / 20000 + 0.50 + boardValue + bindingAdder
 - `bindingAdder` — Perfect Bound = 0, Sewn = 2mm
 - Rounded to nearest whole mm
 
-### PPC (all subtypes)
+### CFC (all back styles)
 
 Same formula as jacket. Board thickness and binding adder required.
 
@@ -241,8 +243,8 @@ bulk: 4–60mm
 coverW = pW + 1          (+1mm manufacturing tolerance)
 docW   = flapW + coverW + spine + coverW + flapW
 docH   = pH
-bulk: 4–60mm
-flap min: 90mm, flap max: pW − 10mm
+bulk: 5–50mm
+flap min: 60mm, flap max: pW − 20mm  (folded flap stops 20mm short of the spine; CONFIG flaps.flapSpineClear)
 score lines at flapW and flapW + coverW from each edge
 ```
 
@@ -253,7 +255,8 @@ coverW = pW + 3          (front/back = trim + 3mm, e.g. 153 → 156; CONFIG jack
 TURN   = 10              (fixed turn-in, mm)
 docW   = flapW + coverW + spine + coverW + flapW   (flapW as entered INCLUDES the 10mm turn-in)
 docH   = pH + 6          (+6mm top/bottom board overhang)
-bulk: max 60mm; min by printing × back style (see Alerts)
+bulk: max 60mm; min by printing × back style (see Alerts) — text bulk < 8mm must be Flat Back
+spine (incl. boards) < 10mm → hand jacketing, not in-line (CONFIG jacket.inlineMinSpineMm)
 flap min: 70mm, flap max: 100mm
 fold at flapW from each edge; turn-in limit at flapW − TURN
 safe zone: no type/border within 3mm of edges
@@ -360,14 +363,14 @@ Widths/heights use `fmt(n, 0)` (integer). Spine uses `fmt(n)` (1dp) for limp/fla
 | `gsm` | Grammage | gsm | all | Paper weight |
 | `volume` | Volume | — | all | Paper volume / bulk factor, step 0.1 |
 | `numPages` | Number of Pages | pp | all | Total extent including plate sections |
-| `flapWidth` | Flap Width | mm | flaps | Min 90mm, max pW−10mm |
+| `flapWidth` | Flap Width | mm | flaps | Min 60mm, max pW−20mm (`flaps.flapMin` / `flapSpineClear`) |
 | `jacketFlapWidth` | Flap Width | mm | jacket | Includes the 10mm turn-in. Min 70mm, max 100mm |
 | `binding` | Binding Style | — | jacket, ppc | Select: Perfect Bound (0) / Sewn (+2mm) |
-| `boardThickness` | Board Size | mm | jacket, ppc | Populated from `CONFIG.boardThicknesses` |
+| `boardThickness` | Board Size | mm | jacket, ppc | Populated from `CONFIG.boardThicknesses`; defaults to 2mm boards (`CONFIG.defaultBoard`) |
 | `ppcType` | Back Style | — | jacket, ppc | Select: round / flatback — sets cased min bulk; CFC gutter from board caliper |
 | `printMethod` | Printing Method | — | jacket, ppc | Populated from `CONFIG.printMethods` (conventional / digital) — sets cased min bulk |
 | `ppcWrap` | Wraparound Size | mm | ppc | Board overhang on all four sides (default 18mm from config, resets on tab switch) |
-| `paperPreset` | Paper Stock | — | all | Optional: select common papers to auto-fill gsm/volume |
+| `paperStockSelect` | Paper Stock Preset | — | all | Clays house papers grouped Conventional / Digital — fills gsm/volume and sets Printing Method |
 
 All number inputs: `type="number"`, `min="0"`. Most hide spinner arrows for cleaner UI; `bcFontScale` (barcode font size) displays spinner arrows for easy adjustment. All fire `cvCalculate()` or `bcUpdatePreview()` on `input` event.
 
@@ -390,16 +393,18 @@ All show `—` until pWidth and pHeight are both > 0.
 
 | ID | Trigger |
 |---|---|
-| `alert-bulk-max` | Text-block bulk > 60mm (all types) |
-| `alert-bulk-min` | Text-block bulk < 4mm (paperback, flaps); cased (jacket, ppc): conventional Flat Back 4mm / Round Back 8mm, digital 10mm |
-| `alert-flap-min` | flapW < 90mm (flaps) |
-| `alert-flap-max` | flapW > pW−10mm (flaps) |
+| `alert-bulk-max` | Text-block bulk > 60mm (paperback, jacket, ppc); > 50mm (flaps) |
+| `alert-bulk-min` | Text-block bulk < 4mm (paperback); < 5mm (flaps); cased (jacket, ppc): conventional Flat Back 4mm / Round Back 8mm, digital 10mm. Uses `bulkFlatBack` text ("must have a Flat Back board hollow") when Round Back is under its minimum but Flat Back would pass |
+| `alert-flap-min` | flapW < 60mm (flaps) — flap alerts sit in their Flap section, under the input |
+| `alert-flap-max` | flapW > pW−20mm (flaps) |
 | `alert-jktflap-min` | flapW < 70mm (jacket) |
 | `alert-jktflap-max` | flapW > 100mm (jacket) |
+| `alert-hand-jacket` | Jacket spine (incl. boards) < 10mm — needs hand jacketing (advisory) |
 | `alert-board-req` | boardThickness = 0 with hasCore (jacket, ppc) |
+| `alert-paper` | Chosen paper stock not held for the trim size, or (cased) its printing method differs from Printing Method |
 | `alert-required-fields` | Mode-specific required field is missing (flaps: flap width; jacket: flap width) — only shows after user enters trim dimensions |
 
-**Bulk** = text-block thickness `(pages × gsm × vol) / 20000` (1dp) — no cover, board or binding allowance. Clays' limits apply to bulk, not spine: max 60mm; min 4mm paperback. Cased minimum depends on printing method and back style — Conventional: Flat Back 4mm, Round Back 8mm; Digital: both 10mm. Limits live in `CONFIG.coverTypes[mode].minBulkMm/maxBulkMm` (cased: `minBulk[printMethod][backStyle]`); alert text in `CONFIG.alerts.bulkMin/bulkMax` with `{bulk}`/`{min}`/`{max}`/`{type}` placeholders, written into the alert divs at runtime. The spine value turns red when either alert shows, and a Bulk line appears in the spec box. All alert messages are customizable in `config.js.alerts`.
+**Bulk** = text-block thickness `(pages × gsm × vol) / 20000` (1dp) — no cover, board or binding allowance. Clays' limits apply to bulk, not spine: max 60mm (flaps 50mm); min 4mm paperback, 5mm flaps. Cased minimum depends on printing method and back style — Conventional: Flat Back 4mm, Round Back 8mm; Digital: both 10mm. Limits live in `CONFIG.coverTypes[mode].minBulkMm/maxBulkMm` (cased: `minBulk[printMethod][backStyle]`); alert text in `CONFIG.alerts.bulkMin/bulkMax` with `{bulk}`/`{min}`/`{max}`/`{type}` placeholders, written into the alert divs at runtime. The spine value turns red when either alert shows, and a Bulk line appears in the spec box. All alert messages are customizable in `config.js.alerts`.
 
 ---
 
@@ -520,18 +525,33 @@ IDs: `btn-specs`, triggered from results card.
 
 ## Paper Stock Presets
 
-Optional dropdown feature (enabled via `CONFIG.features.enablePaperPresets`) pre-populates gsm and volume from common international paper stocks:
+Optional dropdown (enabled via `CONFIG.features.enablePaperPresets`) that fills gsm and volume from the Clays house paper range:
 
-**Populated from:** `CONFIG.paperStocks` — Clays' FSC stock list (Holmen Book / Book Cream, Bulky News, Ensolux, College Text, Arctic Matt, White Woodfree Offset, Munken). Each entry is `{ label, gsm, microns }`. Microns are never shown in the dropdown; volume is computed as `(microns / gsm) × 10` to 2dp in `cvPopulatePaperPresets()`.
+**Populated from:** `CONFIG.paperStocks` — the Clays House Paper Text Range 2026 (`CLAYS_HOUSE_PAPER_RANGE_2026.pdf`). Each entry is `{ label, gsm, microns, method, type, sizes, formats, note? }`. The dropdown groups stocks under `CONFIG.printMethods` (Conventional / Digital); option values are indexes into `CONFIG.paperStocks`. Microns are never shown; volume is `(microns / gsm) × 10` to 2dp (`cvStockVolume()`).
 
 **Behavior:**
-- User selects preset → `gsm` and `volume` inputs auto-fill
-- User leaves blank → must manually enter custom gsm/volume
-- Selection persists in dropdown until user selects different preset
+- Selecting a stock fills `gsm` and `volume`, sets `printMethod` to the stock's method, and shows type, stocked sizes and any supplier note in `paperStockHint`
+- Editing gsm/volume away from the stock's values clears the selection
+- `alert-paper` (non-blocking, shown in the Paper Specification section under gsm/volume) when the trim doesn't match the stock's `formats` (`CONFIG.paperFormats` A/B/Demy/Royal, ±`paperFormatToleranceMm`; `formats: null` = all formats), or in cased modes when Printing Method differs from the stock's method
 
-Volume formula: `(microns / gsm) × 10`. Users should verify values with their paper supplier.
+Example entries:
 
-IDs: `paperPreset` (select), `paperPresetRow` (optional section).
+```js
+paperStocks: [
+  { label: 'FSC Holmen Book 52gsm', gsm: 52, microns: 81, method: 'conventional',
+    type: 'Improved Mechanical', sizes: 'B Format', formats: ['B'] },
+  { label: 'FSC Ensolux Cream 70gsm', gsm: 70, microns: 110, method: 'digital',
+    type: 'Improved Mechanical', sizes: 'Demy & Royal', formats: ['Demy','Royal'],
+    note: 'Large formats are printed on …' },
+]
+```
+
+- Enter the supplier's caliper in `microns`; never put microns in the label.
+- `sizes` is Clays' wording (shown in the hint); `formats` is what the trim check uses — keep them in step.
+- A stock held for both methods gets one entry per method. The placeholder option is added in code, not config.
+- Supplier notes from the range sheet are reworded without the TJ site name. Note-to-stock attribution was read from the PDF layout (notes sit between rows) — confirm with Clays if in doubt.
+
+IDs: `paperStockSelect` (select), `paperStockHint`, `paperPresetRow` (optional section), `alert-paper`.
 
 ---
 
@@ -592,42 +612,25 @@ function cvFmtInt(n) { return String(Math.round(n)); }
 - **Rebranding:** Project renamed to "Clays CoverSpec Studio" with tagline "Production-Ready Cover Specs"
 - **Enhanced config.js:** Added comprehensive customization guide and inline comments explaining all dimension constraints, alert triggers, and how to modify production rules
 - **Improved introduction:** Wider card layout (800px) and larger typography (15px intro, 14px body) for better readability
-- **Paper Stock Presets:** Dropdown with 13 common international paper stocks (Munken, Fedrigoni, Sappi, etc.). Users can select to auto-fill gsm/volume or enter custom values. Fully customizable via config.js
+- **Paper Stock Presets:** (superseded — see House paper range below)
 - **Saved Calculations:** Manual save feature—users click "Save Calculation" to store specs with custom names. No auto-history. Uses browser localStorage, searchable by name
 - **TXT Specs Download:** Alongside PDF template, users can download calculated specifications as a text file with all dimensions, paper details, and cover-type-specific settings
 - **Red PDF Text:** (superseded — see Clays PDF layout below)
-- **Book Cover Icons:** New professional book spine icon design (black on gold background) used in header and introduction cards
 - **Improved UI:** Placeholder text is subtle and smaller; save modal matches app design system; custom modal dialog for saving calculations (no browser prompt)
-- **PPC Wraparound Customization:** Input field allows users to customize board wraparound size (default 18mm, applies to all four sides: top, bottom, front, back). Resets to 18mm when switching to PPC tab
-- **8pp Flap Cover Limit:** Maximum document width increased to 580mm (from 530mm) for limp with flaps
+- **CFC Wraparound Customization:** Input field allows users to customize the turn-in (default 18mm, all four sides). Resets to 18mm when switching to the CFC tab
 - **Required Fields Alert:** Shows when user has entered trim dimensions but hasn't filled in mode-specific required fields (flap width for flaps/jacket)
 - **Updated Alert Messages:** All alerts now reference "Contact Your Printer" instead of "Contact Your Account Manager"
 - **Clean branding:** Removed all references to previous white-label client (TJ Clays/TJ Books)
 - **MIT License:** Published as open-source with permissive licensing
 - **Barcode Text Customization:** ISBN barcode generator now supports toggling ISBN label, digit numbers, and EAN-5 add-on display. Font scaling (50–150%), ISBN format options (formatted vs. raw), and real-time text overflow warning when text exceeds barcode width. Improved text alignment and positioning for cleaner layout
 - **Standard Sizes Reference:** New reference tab displaying UK and European standard book trim sizes (A-Format through A4) with binding types and use cases. Sourced from comprehensive book sizes research document
-- **Spine Warning Updates:** Spine alert messages now reference binding machine limits (Min 2mm – Max 65mm recommended) and suggest contacting printer or considering lower grammage paper as alternatives
+- **Bulk limits** (Oct 2026) — spine warnings replaced by text-block bulk limits: max 60mm; min 4mm paperback; cased by printing method × back style (see Alerts)
 - **Flaps Width Constraint Removed:** Removed 580mm maximum document width constraint for 8pp flap covers, allowing greater flexibility for varied production scenarios
 - **SVG export removed** (Oct 2026) — PDF template is the only template download.
 - **Clays PDF layout:** PDF templates rebuilt in `pdfTemplates.js` after Clays' reference artwork guides — slate/ink palette, dotted safe zones, dimension arrows, job-specific notes.
-
----
-
-## Paper Stock Presets
-
-The `CONFIG.paperStocks` array in config.js provides a dropdown for users to quickly select common papers. Format:
-
-```js
-paperStocks: [
-  { label: '— Select a paper stock (or enter custom) —', gsm: 0, microns: 0 },
-  { label: 'FSC Munken Pure 80gsm', gsm: 80, microns: 104 },
-  { label: 'Your Custom Paper',     gsm: 90, microns: 130 },
-]
-```
-
-Enter the supplier's caliper in `microns`; volume is derived as `(microns / gsm) × 10`. Do not put microns in the label. Users can:
-- Select a preset → gsm/volume auto-fill
-- Leave dropdown blank → manually enter custom values
+- **Printing Method & Back Style** (Oct 2026) — Dust Jacket and CFC have a Printing Method select (Conventional / Digital) and a shared Back Style select; together they set the cased minimum bulk.
+- **House paper range** (Oct 2026) — Paper Stock dropdown replaced with the Clays House Paper Text Range 2026, grouped Conventional / Digital, with stocked-size and printing-method warnings in the Paper Specification section.
+- **Default board** (Oct 2026) — Dust Jacket and CFC default to 2mm boards.
 
 ---
 
@@ -667,19 +670,19 @@ Saved calculations appear in a dropdown at the bottom of the form. Users can loa
 
 Add a check in `cvCalculate()` flagging if `numPages` is odd (cover extents are always even).
 
-### Additional PPC subtypes
+### Additional back styles
 
-Add entries to `CONFIG.coverTypes.ppc.subtypes` with a `gutter` value. The UI dropdown (`ppcType`) is populated from this object — no other changes needed.
+Add entries to `CONFIG.coverTypes.ppc.subtypes` as `{ label, gutter: { <boardValue>: mm, ... } }` — one gutter per board in `boardThicknesses`. Also add the key to each `minBulk[method]` on jacket and ppc, and an `<option>` to `ppcType` in index.html (the select is static markup).
 
 ### Additional board sizes
 
-Add entries to `CONFIG.boardThicknesses`. The board select is populated by `cvPopulateBoardSelect()` at init — no other changes needed.
+Add entries to `CONFIG.boardThicknesses`. The board select is populated by `cvPopulateBoardSelect()` at init. Add a matching gutter to every `ppc.subtypes[type].gutter`.
 
 ### White-labelling
 
 The app ships with "Clays CoverSpec Studio" and "Production-Ready Cover Specs" as defaults. To re-brand:
 
-1. Replace `logo.png` with your brand logo (36px height, transparent background)
+1. Replace `logo-main.svg` (header, 36px height) and `logo.png` (og:image) with your brand logo
 2. Update `CONFIG.brand.name` and `CONFIG.brand.tagline` in `config.js`
 3. Update `CONFIG.paperStocks` to your paper suppliers' stocks and specifications
 4. Optionally update `CONFIG.theme` colors to match your brand identity
